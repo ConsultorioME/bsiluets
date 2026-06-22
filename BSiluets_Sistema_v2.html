@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B·Siluets — Consultorio Médico Estético</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<script src="js/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- ════ PÁGINA PÚBLICA ════ -->
+<div id="public-page">
+
+  <!-- NAV -->
+  <nav class="pub-nav">
+    <div class="logo">B·<span>Siluets</span></div>
+    <ul class="pub-nav-links">
+      <li><a href="#servicios">Servicios</a></li>
+      <li><a href="#agenda-pub">Agenda</a></li>
+      <li><a href="#nosotros">Nosotros</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+    <button class="btn-login" onclick="openLogin()">Panel</button>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-ornament"></div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Medicina Estética · Bienestar · Confianza</p>
+      <h1 class="hero-title">Transforma tu<br><em>bienestar</em><br>con elegancia</h1>
+      <p class="hero-sub">Tratamientos personalizados, resultados naturales y atención de clase médica.</p>
+      <div class="hero-ctas">
+        <button class="btn-primary" onclick="scrollTo('#agenda-pub')">Agendar Cita</button>
+        <button class="btn-outline" onclick="scrollTo('#servicios')">Ver Servicios</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section class="section" id="servicios">
+    <p class="section-label">Tratamientos</p>
+    <h2 class="section-title">Nuestros<br><em>Servicios</em></h2>
+    <div class="services-grid">
+      <div class="service-card"><div class="service-icon">✦</div><div class="service-name">Medicina Estética</div><p class="service-desc">Botox, rellenos dérmicos, hilos tensores y más tratamientos para rejuvenecer tu piel.</p><div class="service-price">Desde $800 MXN</div></div>
+      <div class="service-card"><div class="service-icon">◈</div><div class="service-name">Body Sculpting</div><p class="service-desc">Cavitación, radiofrecuencia y criolipólisis para modelar y definir tu silueta.</p><div class="service-price">Desde $650 MXN</div></div>
+      <div class="service-card"><div class="service-icon">◇</div><div class="service-name">Tratamientos Faciales</div><p class="service-desc">Hidratación profunda, microdermoabrasión, peeling químico y tratamientos antiedad.</p><div class="service-price">Desde $550 MXN</div></div>
+      <div class="service-card"><div class="service-icon">⊕</div><div class="service-name">Suplementación</div><p class="service-desc">Programas de suplementos nutricionales personalizados para potenciar tus resultados.</p><div class="service-price">Desde $450 MXN</div></div>
+      <div class="service-card"><div class="service-icon">◉</div><div class="service-name">Paquetes de Sesiones</div><p class="service-desc">Paquetes de 8 o 10 sesiones con seguimiento personalizado y mejores resultados.</p><div class="service-price">Ahorra hasta 25%</div></div>
+      <div class="service-card"><div class="service-icon">✧</div><div class="service-name">Consulta Médica</div><p class="service-desc">Evaluación integral con diagnóstico personalizado y plan de tratamiento a tu medida.</p><div class="service-price">$350 MXN</div></div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALES -->
+  <section class="section" id="nosotros">
+    <p class="section-label">Testimonios</p>
+    <h2 class="section-title">Lo que dicen<br><em>nuestras pacientes</em></h2>
+    <div class="testimonials">
+      <div class="testimonial"><div class="test-stars">★★★★★</div><p class="test-text">"Llevo 3 meses de tratamiento y los cambios son increíbles. El equipo es muy profesional y atento."</p><div class="test-author">— Karla M., Tepic</div></div>
+      <div class="testimonial"><div class="test-stars">★★★★★</div><p class="test-text">"El paquete de sesiones es excelente, se nota el progreso sesión a sesión. Totalmente recomendado."</p><div class="test-author">— Diana R., Tepic</div></div>
+      <div class="testimonial"><div class="test-stars">★★★★★</div><p class="test-text">"La atención es de primera. Los resultados superaron mis expectativas. Ya agendé mi próximo paquete."</p><div class="test-author">— Claudia V., Tepic</div></div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="pub-footer" id="contacto">
+    <div class="footer-brand">
+      <div class="logo">B·Siluets</div>
+      <p>Consultorio Médico Estético dedicado a realzar tu belleza natural con tratamientos seguros y personalizados.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Servicios</h4>
+      <ul><li>Medicina Estética</li><li>Body Sculpting</li><li>Faciales</li><li>Suplementación</li></ul>
+    </div>
+    <div class="footer-col">
+      <h4>Horarios</h4>
+      <ul><li>Lun – Vie: 9:00 – 19:00</li><li>Sáb: 9:00 – 14:00</li><li>Dom: Cerrado</li></ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contacto</h4>
+      <ul><li>📍 Tepic, Nayarit</li><li>📱 311 000 0000</li><li>✉ contacto@bsiluets.mx</li><li>📸 @bsiluets</li></ul>
+    </div>
+  </footer>
+  <div class="footer-bottom">© 2025 B·Siluets — Todos los derechos reservados &nbsp;·&nbsp; Desarrollado por Software SIE</div>
+
+  <!-- BOT CHAT -->
+  <div id="chatbubble">
+    <div id="chatbox">
+      <div class="chat-header">
+        <div class="chat-avatar">B</div>
+        <div class="chat-header-info"><h4>Asistente B·Siluets</h4><p>● En línea</p></div>
+      </div>
+      <div class="chat-messages" id="chat-msgs">
+        <div class="chat-msg bot">¡Hola! 👋 Soy el asistente de <strong>B·Siluets</strong>. ¿En qué puedo ayudarte hoy?</div>
+      </div>
+      <div class="chat-chips">
+        <button class="chat-chip" onclick="sendChip('Ver servicios')">Ver servicios</button>
+        <button class="chat-chip" onclick="sendChip('Agendar cita')">Agendar cita</button>
+        <button class="chat-chip" onclick="sendChip('Precios')">Precios</button>
+        <button class="chat-chip" onclick="sendChip('Horarios')">Horarios</button>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-in" placeholder="Escribe tu mensaje..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()">➤</button>
+      </div>
+    </div>
+    <button id="chat-toggle" onclick="toggleChat()" title="Chat">💬</button>
+  </div>
+</div>
+
+<!-- ════ LOGIN MODAL ════ -->
+<div id="login-overlay">
+  <div class="login-box" style="position:relative">
+    <button class="login-close" onclick="closeLogin()">×</button>
+    <div class="login-logo">B·Siluets</div>
+    <div class="login-sub">Panel Administrativo</div>
+    <input type="text" id="login-user" placeholder="Usuario" value="admin">
+    <input type="password" id="login-pass" placeholder="Contraseña" value="" onkeydown="if(event.key==='Enter')login()">
+    <div class="login-error" id="login-err">Usuario o contraseña incorrectos</div>
+    <button class="btn-entrar" onclick="login()">Ingresar al Panel</button>
+    <p style="font-size:11px;color:var(--cream);opacity:.25;margin-top:16px">Demo: admin / 1234</p>
+  </div>
+</div>
+
+<!-- ════ ADMIN PANEL ════ -->
+<div id="admin-page" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">B·Siluets</div>
+      <p>Panel Administrativo</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <div class="nav-item active" onclick="showModule('dashboard',this)"><span class="ni">⊞</span>Dashboard</div>
+      <div class="nav-item" onclick="showModule('agenda',this)"><span class="ni">📅</span>Agenda</div>
+      <div class="nav-item" onclick="showModule('pacientes',this)"><span class="ni">👤</span>Pacientes</div>
+      <div class="nav-section">Catálogos</div>
+      <div class="nav-item" onclick="showModule('tratamientos',this)"><span class="ni">✦</span>Tratamientos</div>
+      <div class="nav-item" onclick="showModule('inventario',this)"><span class="ni">📦</span>Suplementos / Inv.</div>
+      <div class="nav-section">Operación</div>
+      <div class="nav-item" onclick="showModule('pagos',this)"><span class="ni">💳</span>Pagos</div>
+      <div class="nav-item" onclick="showModule('paquetes',this)"><span class="ni">🗂</span>Paquetes & Visitas</div>
+      <div class="nav-item" onclick="showModule('creditos',this)"><span class="ni">⚠</span>Créditos & Adeudos</div>
+      <div class="nav-item" onclick="showModule('reportes',this)"><span class="ni">📊</span>Reportes</div>
+      <div class="nav-item" onclick="showModule('caja',this)"><span class="ni">💰</span>Caja</div>
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item" onclick="showModule('bot',this)"><span class="ni">🤖</span>Bot / Chat</div>
+      <div class="nav-item" onclick="showModule('config',this)"><span class="ni">⚙</span>Configuración</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sidebar-user">
+        <div class="su-avatar">A</div>
+        <div class="su-info"><p>Administrador</p><span>admin</span></div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="tb-btn danger" style="width:100%;margin-top:0" onclick="logout()">Cerrar sesión</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <span class="topbar-title" id="module-title">Dashboard</span>
+      <div class="topbar-actions">
+        <button class="tb-btn" onclick="openModal('nuevo-servicio')">+ Nueva Atención</button>
+        <button class="tb-btn" onclick="openModal('nuevo-paciente')">+ Paciente</button>
+      </div>
+    </div>
+
+    <div class="admin-content">
+
+      <!-- DASHBOARD -->
+      <div class="module active" id="mod-dashboard">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-label">Citas Hoy</div><div class="kpi-val">8</div><div class="kpi-sub">3 pendientes</div><span class="kpi-trend up">↑ 2</span></div>
+          <div class="kpi"><div class="kpi-label">Ingresos Mes</div><div class="kpi-val">$42,850</div><div class="kpi-sub">MXN</div><span class="kpi-trend up">↑ 18%</span></div>
+          <div class="kpi"><div class="kpi-label">Pacientes Activos</div><div class="kpi-val">134</div><div class="kpi-sub">12 nuevos este mes</div><span class="kpi-trend up">↑ 9%</span></div>
+          <div class="kpi"><div class="kpi-label">Paquetes Activos</div><div class="kpi-val">27</div><div class="kpi-sub">5 completan esta semana</div><span class="kpi-trend down">↓ 1</span></div>
+          <div class="kpi"><div class="kpi-label">Stock Bajo</div><div class="kpi-val">3</div><div class="kpi-sub">productos</div><span class="kpi-trend down">⚠</span></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <div class="card-title">Próximas Citas <a onclick="showModule('agenda',document.querySelectorAll('.nav-item')[1])">Ver agenda →</a></div>
+            <table>
+              <tr><th>Hora</th><th>Paciente</th><th>Tratamiento</th><th>Estado</th></tr>
+              <tr><td>09:00</td><td>Ana Rodríguez</td><td>Cavitación x2</td><td><span class="badge badge-green">Confirmada</span></td></tr>
+              <tr><td>10:30</td><td>Karla Mendoza</td><td>Botox Labios</td><td><span class="badge badge-green">Confirmada</span></td></tr>
+              <tr><td>11:00</td><td>Diana López</td><td>Consulta + Facial</td><td><span class="badge badge-gold">Pendiente</span></td></tr>
+              <tr><td>13:00</td><td>María Torres</td><td>Body Sculpting #5</td><td><span class="badge badge-gold">Pendiente</span></td></tr>
+              <tr><td>15:30</td><td>Claudia Vega</td><td>Suplemento + Consult.</td><td><span class="badge badge-blue">En sala</span></td></tr>
+              <tr><td>17:00</td><td>Sofía Ruiz</td><td>Relleno dérmico</td><td><span class="badge badge-gray">Sin confirmar</span></td></tr>
+            </table>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">Paquetes por vencer</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>María Torres</span><span class="badge badge-gold">Sesión 7/10</span></div>
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>Laura Soto</span><span class="badge badge-red">Sesión 8/8</span></div>
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>Fernanda Gil</span><span class="badge badge-gold">Sesión 6/10</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Últimos Pagos</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>Ana R.</span><span style="color:var(--gold)">$1,800</span></div>
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>Diana L.</span><span style="color:var(--gold)">$3,200</span></div>
+                <div style="font-size:13px;color:var(--cream);opacity:.7;display:flex;justify-content:space-between"><span>Karla M.</span><span style="color:var(--gold)">$950</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AGENDA -->
+      <div class="module" id="mod-agenda">
+        <div class="agenda-admin">
+          <div>
+            <div class="mini-cal">
+              <div class="cal-header">
+                <button class="cal-nav" onclick="calNav(-1)">‹</button>
+                <span class="cal-month" id="cal-month-lbl">Junio 2025</span>
+                <button class="cal-nav" onclick="calNav(1)">›</button>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+              <button class="tb-btn" style="width:100%" onclick="abrirModalCita()">+ Nueva Cita</button>
+              
+            </div>
+          </div>
+          <div class="agenda-slots">
+            <div class="slot-header" id="slot-header">Citas — Lunes 2 de junio</div>
+            <div id="slot-list">
+              <div class="slot-item"><span class="slot-time">09:00</span><div class="slot-info"><div class="slot-patient">Ana Rodríguez</div><div class="slot-treatment">Cavitación — Sesión 3/10</div></div><span class="badge badge-green" style="align-self:center">Confirmada</span><div class="slot-actions"><button class="icon-btn" title="Ver">👁</button><button class="icon-btn" title="Editar">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">10:30</span><div class="slot-info"><div class="slot-patient">Karla Mendoza</div><div class="slot-treatment">Botox Labios + Consulta</div></div><span class="badge badge-green" style="align-self:center">Confirmada</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">11:00</span><div class="slot-info"><div class="slot-patient">Diana López</div><div class="slot-treatment">Facial Antiedad</div></div><span class="badge badge-gold" style="align-self:center">Pendiente</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">13:00</span><div class="slot-info"><div class="slot-patient">María Torres</div><div class="slot-treatment">Body Sculpting — Sesión 7/10</div></div><span class="badge badge-gold" style="align-self:center">Pendiente</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">15:30</span><div class="slot-info"><div class="slot-patient">Claudia Vega</div><div class="slot-treatment">Suplemento Colágeno + Consulta</div></div><span class="badge badge-blue" style="align-self:center">En sala</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">17:00</span><div class="slot-info"><div class="slot-patient">Sofía Ruiz</div><div class="slot-treatment">Relleno Dérmico</div></div><span class="badge badge-gray" style="align-self:center">Sin confirmar</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PACIENTES -->
+      <div class="module" id="mod-pacientes">
+        <div class="patients-header">
+          <input type="text" class="search-box" placeholder="🔍  Buscar paciente por nombre, teléfono o tratamiento..." oninput="buscarPaciente(this.value)">
+          <button class="tb-btn" onclick="openModal('nuevo-paciente')">+ Nuevo Paciente</button>
+        </div>
+        <div class="patient-profile">
+          <div>
+            <div class="profile-card">
+              <div class="profile-avatar" id="perfil-avatar">—</div>
+              <div class="profile-name" id="perfil-nombre">Selecciona una paciente</div>
+              <div class="profile-sub">Paciente activa</div>
+              <div class="profile-stats">
+                <div class="pstat"><div class="pstat-val" id="perfil-sesiones">—</div><div class="pstat-lbl">Sesiones</div></div>
+                <div class="pstat"><div class="pstat-val" id="perfil-invertido">—</div><div class="pstat-lbl">Invertido</div></div>
+                <div class="pstat"><div class="pstat-val" id="perfil-paquetes">—</div><div class="pstat-lbl">Paquetes</div></div>
+                <div class="pstat"><div class="pstat-val" id="perfil-proxcita">—</div><div class="pstat-lbl">Próx. cita</div></div>
+              </div>
+            </div>
+            <div style="background:var(--charcoal);border:1px solid rgba(201,168,108,.1);padding:16px;margin-top:12px;font-size:13px">
+              <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:12px">Datos de contacto</div>
+              <div style="color:var(--cream);opacity:.6;margin-bottom:6px">📱 <span id="perfil-tel">—</span></div>
+              <div style="color:var(--cream);opacity:.6;margin-bottom:6px">✉ <span id="perfil-email">—</span></div>
+              <div style="color:var(--cream);opacity:.6;margin-bottom:6px">🎂 <span id="perfil-edad">—</span></div>
+              <div style="color:var(--cream);opacity:.6">📍 <span id="perfil-ciudad">—</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="session-tracker">
+              <div class="st-title">Control de paquetes / sesiones</div>
+              <div id="paquetes-paciente"></div>
+             </div>
+            <div class="card" style="margin-top:16px">
+              <div class="card-title">Historial de atenciones</div>
+                <table id="tabla-historial">
+                  <tr><th>Fecha</th><th>Servicio</th><th>Pago</th><th>Monto</th></tr>
+                  <tr><td colspan="4" style="text-align:center;opacity:.3;padding:20px">Selecciona una paciente</td></tr>
+                </table>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="card">
+            <div class="card-title">Todos los Pacientes</div>
+            <table id="tabla-pacientes-body"></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRATAMIENTOS -->
+        <div class="module" id="mod-tratamientos">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <input type="text" class="search-box" style="max-width:320px" placeholder="🔍  Buscar tratamiento..." oninput="buscarTratamiento(this.value)">
+            <div style="display:flex;gap:10px">
+              <select id="filtro-categoria" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:12px;outline:none" onchange="buscarTratamiento(document.querySelector('#mod-tratamientos .search-box').value)">
+                <option value="">Todas las categorías</option>
+                <option value="Medicina Estética">Medicina Estética</option>
+                <option value="Body Sculpting">Body Sculpting</option>
+                <option value="Facial">Facial</option>
+                <option value="General">General</option>
+              </select>
+              <button class="tb-btn" onclick="openModal('nuevo-trat')">+ Nuevo Tratamiento</button>
+            </div>
+          </div>
+          <div id="treat-grid-container" class="treat-grid"></div>
+        </div>
+
+      <!-- INVENTARIO -->
+        <div class="module" id="mod-inventario">
+          <div id="stock-alertas"></div>
+          <div class="inv-controls">
+            <input type="text" class="search-box" style="max-width:300px" placeholder="🔍  Buscar producto..." oninput="buscarInventario(this.value)">
+            <select id="filtro-inv-cat" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none" onchange="buscarInventario(document.querySelector('#mod-inventario .search-box').value)">
+              <option value="">Todas las categorías</option>
+              <option value="Suplemento">Suplementos</option>
+              <option value="Insumo médico">Insumos médicos</option>
+              <option value="Cosmético">Cosméticos</option>
+            </select>
+            <button class="tb-btn" onclick="openModal('nuevo-prod')">+ Producto</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Inventario de Suplementos y Productos</div>
+            <table>
+              <tr>
+                <th>Producto</th><th>Categoría</th><th>Stock</th><th>Unidad</th>
+                <th>Stock mín.</th><th>Precio venta</th><th>Estado</th><th></th>
+              </tr>
+              <tbody id="tabla-inventario"></tbody>
+            </table>
+          </div>
+        </div>
+
+      <!-- PAGOS -->
+<div class="module" id="mod-pagos">
+  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
+    <div>
+      <div class="pago-form">
+        <div class="card-title" style="margin-bottom:20px">Nueva Atención / Cobro</div>
+
+        <div class="accion-servicio">
+          <div class="as-header"><span class="as-title">Paciente</span></div>
+          <div class="pago-grid">
+            <div class="fg"><label>Paciente</label>
+              <select id="pago-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+            <div class="fg"><label>Fecha</label>
+              <input type="date" id="pago-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+            </div>
+          </div>
+        </div>
+
+        <div class="accion-servicio">
+          <div class="as-header">
+            <span class="as-title">Consulta</span>
+            <input type="checkbox" id="chk-consulta" onchange="recalcPago()" style="accent-color:var(--gold)">
+          </div>
+          <div id="consulta-block" style="display:none">
+            <div class="fg">
+              <label>Tipo de consulta</label>
+              <select id="pago-consulta-tipo" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                <option value="350">Consulta general ($350)</option>
+                <option value="200">Consulta de seguimiento ($200)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="accion-servicio">
+          <div class="as-header">
+            <span class="as-title">Tratamiento</span>
+            <input type="checkbox" id="chk-trat" onchange="recalcPago()" style="accent-color:var(--gold)">
+          </div>
+          <div id="trat-block" style="display:none">
+            <div class="pago-grid">
+              <div class="fg"><label>Tratamiento</label>
+                <select id="pago-tratamiento" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                  <option value="0">Seleccionar...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accion-servicio">
+          <div class="as-header">
+            <span class="as-title">Suplementos</span>
+            <input type="checkbox" id="chk-supl" onchange="recalcPago()" style="accent-color:var(--gold)">
+          </div>
+          <div id="supl-block" style="display:none">
+            <div class="pago-grid">
+              <div class="fg"><label>Producto</label>
+                <select id="pago-suplemento" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                  <option value="0">Seleccionar...</option>
+                </select>
+              </div>
+              <div class="fg"><label>Cantidad</label>
+                <input type="number" id="pago-supl-qty" step="0.25" min="0.25" value="1" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pago-total">
+          <div class="pago-total-row"><span>Consulta</span><span id="tot-consulta">$0</span></div>
+          <div class="pago-total-row"><span>Tratamiento</span><span id="tot-trat">$0</span></div>
+          <div class="pago-total-row"><span>Suplementos</span><span id="tot-supl">$0</span></div>
+          <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
+          <div class="payment-methods">
+            <div class="pm selected" onclick="selPM(this)" data-metodo="efectivo">💵 Efectivo</div>
+            <div class="pm" onclick="selPM(this)" data-metodo="tarjeta">💳 Tarjeta</div>
+            <div class="pm" onclick="selPM(this)" data-metodo="credito">📲 Crédito</div>
+          </div>
+        </div>
+
+        <div class="fg" style="margin-top:14px">
+          <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4">Notas del cobro (opcional)</label>
+          <input type="text" id="pago-notas" placeholder="Ej. Pago parcial, próxima sesión..." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;margin-top:6px">
+        </div>
+
+        <button class="btn-primary" style="margin-top:20px;width:100%" onclick="registrarCobro()">Registrar Cobro</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Últimos Cobros</span>
+        <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
+      </div>
+      <table>
+          <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th>Total</th><th></th></tr>
+          <tbody id="tabla-ultimos-cobros">
+            <tr><td colspan="4" style="text-align:center;opacity:.3;padding:16px">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+      <!-- REPORTES -->
+      <div class="module" id="mod-reportes">
+        <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center">
+          <select id="reporte-mes" onchange="initReportes()" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none"></select>
+          <button class="tb-btn" onclick="initReportes()">🔄 Actualizar</button>
+        </div>
+        <div class="kpi-grid" style="margin-bottom:24px">
+          <div class="kpi"><div class="kpi-label">Ingresos del mes</div><div class="kpi-val" id="rep-ingresos">—</div></div>
+          <div class="kpi"><div class="kpi-label">Sesiones realizadas</div><div class="kpi-val" id="rep-sesiones">—</div></div>
+          <div class="kpi"><div class="kpi-label">Pacientes atendidas</div><div class="kpi-val" id="rep-pacientes">—</div></div>
+          <div class="kpi"><div class="kpi-label">Tratamiento top</div><div class="kpi-val" id="rep-top" style="font-size:18px">—</div></div>
+        </div>
+        <div class="reports-grid">
+          <div class="card">
+            <div class="card-title">Ingresos por semana</div>
+            <div class="bar-chart" id="bar-ingresos" style="margin-top:12px;height:140px"></div>
+            <div style="margin-top:28px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sesiones por tratamiento</div>
+            <div class="bar-chart" id="bar-trats" style="margin-top:12px;height:140px"></div>
+            <div style="margin-top:28px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Métodos de pago</div>
+            <div id="rep-metodos" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Últimos cobros del mes</div>
+            <table style="margin-top:8px">
+              <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Total</th></tr>
+              <tbody id="tabla-rep-cobros"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    <!-- CAJA -->
+    <div class="module" id="mod-caja">
+      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap">
+        <div class="fg" style="margin-bottom:0">
+          <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
+          <input type="date" id="caja-fecha" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="initCaja()">
+        </div>
+        <button class="tb-btn" onclick="initCaja()">🔄 Actualizar</button>
+      </div>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi"><div class="kpi-label">Total del día</div><div class="kpi-val" id="caja-total">—</div></div>
+        <div class="kpi"><div class="kpi-label">💵 Efectivo</div><div class="kpi-val" id="caja-efectivo" style="color:#27AE60">—</div></div>
+        <div class="kpi"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-val" id="caja-tarjeta" style="color:#2980B9">—</div></div>
+        <div class="kpi"><div class="kpi-label">📲 Crédito</div><div class="kpi-val" id="caja-credito" style="color:#e74c3c">—</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title">Cobros del día (Pagos)</div>
+          <table>
+            <tr><th>Paciente</th><th>Concepto</th><th>Método</th><th>Monto</th></tr>
+            <tbody id="caja-tabla-pagos"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-title">Abonos de sesiones (Paquetes)</div>
+          <table>
+            <tr><th>Paciente</th><th>Sesión</th><th>Método</th><th>Monto</th></tr>
+            <tbody id="caja-tabla-visitas"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-title">Abonos a adeudos (Créditos)</div>
+        <table>
+          <tr><th>Paciente</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
+          <tbody id="caja-tabla-abonos"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+
+      <!-- BOT / CHAT -->
+      <div class="module" id="mod-bot">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="config-card">
+            <div class="config-title">Configuración del Bot</div>
+            <div class="config-row"><label>Bot activo en página pública</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Respuestas automáticas (IA)</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Notificación al admin (WhatsApp)</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Guardar historial de chats</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div style="margin-top:16px">
+              <div class="fg"><label>Nombre del asistente</label><input class="config-input" style="width:100%" value="Asistente B·Siluets"></div>
+              <div class="fg" style="margin-top:10px"><label>Mensaje de bienvenida</label><textarea class="config-input" style="width:100%;height:70px;resize:none">¡Hola! Soy el asistente de B·Siluets. ¿En qué puedo ayudarte hoy?</textarea></div>
+            </div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Intenciones detectadas</div>
+            <div class="intent-list">
+              <div class="intent-item"><span>Ver servicios / precios</span><span class="intent-badge">Activo</span></div>
+              <div class="intent-item"><span>Agendar cita</span><span class="intent-badge">Activo</span></div>
+              <div class="intent-item"><span>Consultar horarios</span><span class="intent-badge">Activo</span></div>
+              <div class="intent-item"><span>Información de tratamientos</span><span class="intent-badge">Activo</span></div>
+              <div class="intent-item"><span>Preguntar por paquetes</span><span class="intent-badge">Activo</span></div>
+              <div class="intent-item"><span>Ubicación / contacto</span><span class="intent-badge">Activo</span></div>
+            </div>
+            <div style="margin-top:16px">
+              <div class="card-title">Vista previa del bot</div>
+              <div class="bot-preview">
+                <div class="bot-msg-preview">¡Hola! Soy el asistente de B·Siluets. ¿En qué puedo ayudarte hoy?</div>
+                <div class="bot-msg-preview">Nuestros servicios incluyen: Medicina Estética, Body Sculpting, Tratamientos Faciales y Suplementación. ¿Te gustaría saber más de alguno?</div>
+                <div class="bot-msg-preview">Para agendar una cita puedes llenar el formulario en nuestra página o contactarnos al 311 000 0000. ¡Con gusto te atendemos!</div>
+              </div>
+            </div>
+          </div>
+          <div class="config-card" style="grid-column:1/-1">
+            <div class="config-title">Conversaciones recientes</div>
+            <table>
+              <tr><th>Fecha</th><th>Visitante</th><th>Mensajes</th><th>Intención detectada</th><th>Agendó</th></tr>
+              <tr><td>02/Jun 14:32</td><td>Visitante #1842</td><td>7</td><td>Agendar cita + precios</td><td><span class="badge badge-green">Sí</span></td></tr>
+              <tr><td>02/Jun 11:15</td><td>Visitante #1841</td><td>3</td><td>Consultar horarios</td><td><span class="badge badge-gray">No</span></td></tr>
+              <tr><td>01/Jun 18:20</td><td>Visitante #1840</td><td>12</td><td>Información paquetes</td><td><span class="badge badge-green">Sí</span></td></tr>
+              <tr><td>01/Jun 10:05</td><td>Visitante #1839</td><td>5</td><td>Ver servicios</td><td><span class="badge badge-gold">Pendiente</span></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONFIGURACIÓN -->
+      <div class="module" id="mod-config">
+        <div class="config-grid">
+          <div class="config-card">
+            <div class="config-title">Datos del Consultorio</div>
+            <div class="fg" style="margin-bottom:10px"><label>Nombre del consultorio</label><input class="config-input" style="width:100%" value="B·Siluets Consultorio Médico Estético"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Dirección</label><input class="config-input" style="width:100%" value="Tepic, Nayarit, México"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Teléfono</label><input class="config-input" style="width:100%" value="311 000 0000"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Correo</label><input class="config-input" style="width:100%" value="contacto@bsiluets.mx"></div>
+            <div class="fg"><label>Instagram</label><input class="config-input" style="width:100%" value="@bsiluets"></div>
+            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Datos guardados correctamente')">Guardar</button>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Horarios de Atención</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="config-row"><label>Lunes — Viernes</label><input class="config-input" value="09:00 — 19:00"></div>
+              <div class="config-row"><label>Sábado</label><input class="config-input" value="09:00 — 14:00"></div>
+              <div class="config-row"><label>Domingo</label><input class="config-input" value="Cerrado"></div>
+              <div class="config-row"><label>Cita mínima (min)</label><input class="config-input" value="30" style="width:80px"></div>
+            </div>
+            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Horarios actualizados')">Guardar</button>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Notificaciones Automáticas</div>
+            <div class="config-row"><label>Recordatorio de cita (24h antes)</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Confirmación por WhatsApp</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Alerta stock bajo</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Resumen diario al admin</label><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+            <div class="config-row"><label>Notif. paquete por vencer</label><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div style="margin-top:12px"><div class="fg"><label>WhatsApp admin</label><input class="config-input" style="width:100%" value="311 000 0000"></div></div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Usuarios del Sistema</div>
+            <table>
+              <tr><th>Usuario</th><th>Rol</th><th>Estado</th></tr>
+              <tr><td>admin</td><td><span class="badge badge-gold">Administrador</span></td><td><span class="badge badge-green">Activo</span></td></tr>
+              <tr><td>recepcion</td><td><span class="badge badge-blue">Recepcionista</span></td><td><span class="badge badge-green">Activo</span></td></tr>
+            </table>
+            <button class="tb-btn" style="margin-top:14px">+ Agregar usuario</button>
+          </div>
+
+          <div class="config-card">
+            <div class="config-title">Bloqueo de Fechas</div>
+            <div style="margin-bottom:14px">
+              <button class="tb-btn" style="width:100%" onclick="openModal('bloquear-fecha')">🔒 Bloquear fecha(s)</button>
+            </div>
+            <div class="card" style="margin-top:12px">
+              <div class="card-title">Fechas bloqueadas</div>
+              <table>
+                <tr><th>Fecha</th><th>Tipo</th><th>Razón</th><th></th></tr>
+                <tbody id="tabla-fechas-bloqueadas"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAQUETES & VISITAS -->
+      <div class="module" id="mod-paquetes">
+        <div class="mod-tabs">
+          <button class="mod-tab active" onclick="showModTab('paq-lista',this)">Paquetes registrados</button>
+          <button class="mod-tab" onclick="showModTab('paq-visita',this)">Registrar visita / cobro</button>
+          <button class="mod-tab" onclick="showModTab('paq-notas',this)">Notas del día</button>
+        </div>
+        <div class="mod-panel active" id="paq-lista">
+          <div class="kpi-grid" style="margin-bottom:20px">
+            <div class="kpi"><div class="kpi-label">Paquetes activos</div><div class="kpi-val" id="kpi-paq-activos">—</div></div>
+            <div class="kpi"><div class="kpi-label">Con saldo pendiente</div><div class="kpi-val" id="kpi-paq-saldo">—</div></div>
+            <div class="kpi"><div class="kpi-label">Vencen esta semana</div><div class="kpi-val" id="kpi-paq-vencen" style="color:#e74c3c">—</div></div>
+            <div class="kpi"><div class="kpi-label">Total en cartera</div><div class="kpi-val" id="kpi-paq-cartera">—</div></div>
+          </div>
+          <div style="display:flex;gap:12px;margin-bottom:18px">
+            <input type="text" class="search-box" placeholder="🔍  Buscar paciente o paquete..." oninput="buscarPaquete(this.value)">
+            <button class="tb-btn" onclick="openModal('nuevo-paquete')">+ Nuevo Paquete</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Paquetes</div>
+            <table>
+              <tr><th>Paciente</th><th>Tratamiento</th><th>Sesiones</th><th>Progreso</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr>
+              <tbody id="tabla-paquetes-body"></tbody>
+            </table>
+          </div>
+          <div class="card" id="detalle-paquete" style="display:none;margin-top:18px">
+            <div class="card-title">
+              <span id="det-titulo">Detalle</span>
+              <button class="tb-btn" style="font-size:10px;padding:4px 10px" onclick="document.getElementById('detalle-paquete').style.display='none'">× Cerrar</button>
+            </div>
+            <div id="det-content"></div>
+          </div>
+        </div>
+        <div class="mod-panel" id="paq-visita">
+          <div class="info-box-mod">Al registrar la visita se genera una <strong>Nota de Venta</strong>. Si el paciente no paga, la nota se emite en <strong>$0.00</strong> como comprobante oficial de asistencia.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div class="card">
+              <div class="card-title">Datos de la visita</div>
+              <div class="fg" style="margin-bottom:12px">
+                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
+                <select id="vis-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="cargarPaqueteVis()">
+                  <option value="">Seleccionar...</option>
+                </select>
+              </div>
+              <div id="info-paq-vis" style="display:none;margin-bottom:12px">
+                <div style="background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.12);padding:13px">
+                  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:8px">Info del paquete</div>
+                  <div id="paq-info-rows" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px"></div>
+                </div>
+              </div>
+              <div class="fg" style="margin-bottom:12px">
+                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
+                <input type="date" id="vis-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+              </div>
+              <div class="fg" style="margin-bottom:12px">
+                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">¿Realiza pago hoy?</label>
+                <select id="vis-pago-tipo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="togglePagoVis()">
+                  <option value="no">No — solo registrar visita (nota en $0)</option>
+                  <option value="abono">Sí — abono al saldo del paquete</option>
+                  <option value="total">Sí — paga el total restante</option>
+                </select>
+              </div>
+              <div id="bloque-pago-vis" style="display:none;margin-bottom:12px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div>
+                    <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Monto</label>
+                    <input type="number" id="vis-monto" placeholder="0.00" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" oninput="actualizarNotaVis()">
+                  </div>
+                  <div>
+                    <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
+                    <select id="vis-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                      <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-primary" style="width:100%;padding:12px;margin-top:6px" onclick="generarNotaVis()">Registrar Visita & Generar Nota</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Vista previa — Nota de Venta</div>
+              <div id="nota-preview-wrap"><div style="text-align:center;padding:40px;color:var(--cream);opacity:.2;font-size:13px">Selecciona un paciente para previsualizar</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mod-panel" id="paq-notas">
+  <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
+    <div class="fg" style="margin-bottom:0">
+      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
+      <input type="date" id="filtro-notas-fecha" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="filtrarNotas()">
+    </div>
+    <div class="fg" style="margin-bottom:0">
+      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
+      <select id="filtro-notas-paciente" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;min-width:200px" onchange="filtrarNotas()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <button class="tb-btn" onclick="limpiarFiltrosNotas()">✕ Limpiar filtros</button>
+    <div style="margin-left:auto;background:rgba(201,168,108,.08);border:1px solid rgba(201,168,108,.15);padding:10px 20px;text-align:right">
+      <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream);opacity:.4;margin-bottom:4px">Subtotal filtrado</div>
+      <div id="subtotal-notas" style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold)">$0</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Notas — <span id="notas-fecha-hoy" style="color:var(--cream);opacity:.4;font-weight:300"></span></div>
+    <table>
+      <tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Sesión</th><th>Pago</th><th>Método</th><th>Saldo pendiente</th><th></th></tr>
+      <tbody id="tabla-notas-hoy"></tbody>
+    </table>
+  </div>
+</div>
+      </div>
+
+      <!-- CRÉDITOS & ADEUDOS -->
+      <div class="module" id="mod-creditos">
+        <div class="kpi-grid" style="margin-bottom:20px">
+          <div class="kpi"><div class="kpi-label">Clientes con adeudo</div><div class="kpi-val" id="kpi-cred-clientes">—</div></div>
+          <div class="kpi"><div class="kpi-label">Total en cartera</div><div class="kpi-val" id="kpi-cred-cartera">—</div></div>
+          <div class="kpi"><div class="kpi-label">Vencidos +30 días</div><div class="kpi-val" id="kpi-cred-vencidos" style="color:#e74c3c">—</div></div>
+        </div>
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-title">⚠ Alertas de vencimiento</div>
+          <div id="alertas-credito-cont"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Todos los créditos activos</div>
+          <table>
+            <tr><th>Paciente</th><th>Adeudo paquetes</th><th>Cobros crédito</th><th>Total adeudo</th><th>Antigüedad</th><th></th></tr>
+            <tbody id="tabla-creditos-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+<!-- ════ MODALES ════ -->
+<div class="modal-overlay" id="modal-nuevo-paciente">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('nuevo-paciente')">×</button>
+    <div class="modal-title">Nueva Paciente</div>
+    <input type="hidden" id="pac-id">
+    <div class="form-row"><div class="fg"><label>Nombre</label><input id="pac-nombre" placeholder="Nombre"></div><div class="fg"><label>Apellidos</label><input id="pac-apellidos" placeholder="Apellidos"></div></div>
+    <div class="form-row"><div class="fg"><label>Teléfono</label><input id="pac-telefono" placeholder="311 000 0000"></div><div class="fg"><label>Correo</label><input id="pac-correo" placeholder="correo@ejemplo.com"></div></div>
+    <div class="form-row">
+  <div class="fg">
+    <label>Fecha nacimiento</label>
+    <input id="pac-nacimiento" type="date" onchange="calcularEdad()">
+  </div>
+  <div class="fg">
+    <label>Edad</label>
+    <input id="pac-edad" type="number" placeholder="—" readonly style="color:var(--gold);opacity:.7">
+  </div>
+  </div>
+      <div class="form-row full"><div class="fg"><label>Notas / Alergias</label><textarea id="pac-notas" placeholder="Notas médicas o alergias relevantes..."></textarea></div></div>
+      <div class="form-row full"><div class="fg"><label>Alergias</label><input id="pac-alergias" placeholder="Alergias conocidas..."></div></div>
+      <div class="modal-actions"><button class="btn-outline" onclick="closeModal('nuevo-paciente')">Cancelar</button><button class="btn-primary" onclick="guardarPaciente()">Guardar</button></div>
+    </div>
+  </div>
+
+<div class="modal-overlay" id="modal-nueva-cita">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('nueva-cita')">×</button>
+    <div class="modal-title">Nueva Cita</div>
+    <input type="hidden" id="cita-id">
+    <div class="form-row">
+      <div class="fg"><label>Paciente</label>
+        <select id="cita-paciente">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div class="fg"><label>Tratamiento</label>
+        <select id="cita-tratamiento">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Fecha</label><input type="date" id="cita-fecha"></div>
+      <div class="fg"><label>Hora</label><input type="time" id="cita-hora"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Duración</label>
+        <select id="cita-duracion">
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60" selected>1 hora</option>
+          <option value="90">1.5 horas</option>
+          <option value="120">2 horas</option>
+        </select>
+      </div>
+      <div class="fg"><label>Estado</label>
+        <select id="cita-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="confirmada">Confirmada</option>
+          <option value="en_sala">En sala</option>
+          <option value="completada">Completada</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row full"><div class="fg"><label>Notas</label><textarea id="cita-notas" placeholder="Indicaciones especiales..."></textarea></div></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nueva-cita');limpiarFormCita()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarCita()">Agendar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-nuevo-trat">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('nuevo-trat')">×</button>
+    <div class="modal-title">Nuevo Tratamiento</div>
+    <input type="hidden" id="trat-id">
+    <div class="form-row">
+      <div class="fg"><label>Nombre</label><input id="trat-nombre" placeholder="Ej. Plasma Rico en Plaquetas"></div>
+      <div class="fg"><label>Categoría</label>
+        <div style="display:flex;gap:8px;align-items:center">
+        <select id="trat-categoria" style="flex:1">
+          <option>Medicina Estética</option>
+          <option>Body Sculpting</option>
+          <option>Facial</option>
+          <option>General</option>
+        </select>
+        <button type="button" class="tb-btn" style="padding:8px 12px;white-space:nowrap" onclick="agregarCategoriaTrat()">+ Cat.</button>
+      </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Precio por sesión ($)</label><input id="trat-precio" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="fg" style="justify-content:flex-end;padding-top:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.7">
+          <input type="checkbox" id="trat-maneja-paquete" onchange="togglePaqueteOpts()" style="accent-color:var(--gold)">
+          Maneja paquetes de sesiones
+        </label>
+      </div>
+    </div>
+    <div id="bloque-paquetes-opts" style="display:none;background:rgba(201,168,108,.05);border:1px solid rgba(201,168,108,.1);padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:12px">Tipos de paquete disponibles</div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.7;margin-bottom:10px">
+        <input type="checkbox" id="trat-paq8" style="accent-color:var(--gold)"> Paquete de 8 sesiones
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.7">
+        <input type="checkbox" id="trat-paq10" style="accent-color:var(--gold)"> Paquete de 10 sesiones
+      </label>
+    </div>
+    <div class="form-row full"><div class="fg"><label>Descripción</label><textarea id="trat-descripcion" placeholder="Descripción del tratamiento..."></textarea></div></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nuevo-trat');limpiarFormTratamiento()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarTratamiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-nuevo-prod">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('nuevo-prod')">×</button>
+    <div class="modal-title">Nuevo Producto</div>
+    <input type="hidden" id="prod-id">
+    <div class="form-row">
+      <div class="fg"><label>Nombre</label><input id="prod-nombre" placeholder="Ej. Colágeno Hidrolizado"></div>
+      <div class="fg"><label>Categoría</label>
+        <select id="prod-categoria">
+          <option>Suplemento</option>
+          <option>Insumo médico</option>
+          <option>Cosmético</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fg"><label>Stock inicial</label><input id="prod-stock" type="number" step="0.25" placeholder="0.00"></div>
+      <div class="fg"><label>Unidad</label>
+        <select id="prod-unidad">
+          <option>kg</option><option>litros</option><option>pzas</option><option>cajas</option>
+        </select>
+      </div>
+      <div class="fg"><label>Stock mínimo</label><input id="prod-stock-min" type="number" step="0.25" placeholder="0.00"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Precio de venta</label><input id="prod-precio" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>Proveedor (opcional)</label><input id="prod-proveedor" placeholder="Nombre del proveedor"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nuevo-prod');limpiarFormProd()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarProducto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO PAQUETE -->
+<div class="modal-overlay" id="modal-nuevo-paquete">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('nuevo-paquete')">×</button>
+    <div class="modal-title">Nuevo Paquete de Sesiones</div>
+    <input type="hidden" id="npaq-id">
+    <div class="form-row">
+      <div class="fg"><label>Paciente</label>
+        <select id="npaq-paciente" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div class="fg"><label>Tratamiento</label>
+        <select id="npaq-tratamiento" onchange="calcTotalPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+          <option value="0">Seleccionar...</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fg"><label>No. sesiones</label>
+        <select id="npaq-sesiones" onchange="calcTotalPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+          <option value="8">8 sesiones</option>
+          <option value="10" selected>10 sesiones</option>
+          <option value="12">12 sesiones</option>
+        </select>
+      </div>
+      <div class="fg"><label>Precio/sesión</label>
+        <input type="number" id="npaq-precio" value="0" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
+      </div>
+      <div class="fg"><label>Total paquete</label>
+        <input type="number" id="npaq-total" value="0" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
+      </div>
+    </div>
+    <div class="fg"><label>Esquema de pago</label>
+      <select id="npaq-esquema" onchange="toggleEsquema()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+        <option value="total">Pago total al inicio</option>
+        <option value="sesion">Pago por sesión</option>
+        <option value="enganche">Enganche + saldo en abonos</option>
+      </select>
+    </div>
+    <div id="bloque-enganche" style="display:none">
+      <div class="form-row">
+        <div class="fg"><label>Enganche inicial</label>
+          <input type="number" id="npaq-enganche" placeholder="0.00" oninput="calcSaldoPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+        </div>
+        <div class="fg"><label>Saldo restante</label>
+          <input type="number" id="npaq-saldo" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label>Fecha de inicio</label>
+      <input type="date" id="npaq-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nuevo-paquete')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarPaquete()">Registrar Paquete</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ABONO -->
+<div class="modal-overlay" id="modal-abono">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeModal('abono')">×</button>
+    <div class="modal-title" id="abono-paciente-title">Registrar Abono</div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,108,.1)">Crédito activo</div>
+    <div style="background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.1);padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7;margin-bottom:6px"><span>Saldo pendiente</span><span id="abono-saldo-actual" style="color:#e74c3c;font-weight:500"></span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7"><span>Después del abono</span><span id="abono-saldo-nuevo" style="color:var(--gold)">$—</span></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Monto del abono</label><input type="number" id="abono-monto" placeholder="0.00" oninput="calcNuevoSaldo()"></div>
+      <div class="fg"><label>Método</label><select id="abono-metodo"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+    </div>
+    <div class="fg"><label>Fecha</label><input type="date" id="abono-fecha"></div>
+    <div class="fg"><label>Referencia (opcional)</label><input type="text" placeholder="Nota o referencia..."></div>
+    <div style="margin-top:16px">
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);opacity:.55;margin-bottom:10px">Historial de abonos</div>
+      <div id="historial-abonos">
+        <div class="abono-item"><span class="abono-fecha">01/Mar/25</span><span class="abono-desc">Abono inicial</span><span class="abono-monto">+$4,000</span><span class="badge badge-green" style="font-size:10px">Efectivo</span></div>
+        <div class="abono-item"><span class="abono-fecha">15/Mar/25</span><span class="abono-desc">Abono 2</span><span class="abono-monto">+$2,000</span><span class="badge badge-blue" style="font-size:10px">Tarjeta</span></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('abono')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarAbonoReal()">Registrar Abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOTA IMPRIMIBLE -->
+<div class="modal-overlay" id="modal-nota-impr">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="closeModal('nota-impr')">×</button>
+    <div class="modal-title">Nota de Venta</div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,108,.1)">Vista de impresión</div>
+    <div id="nota-imprimible"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nota-impr')">Cerrar</button>
+      <button class="btn-primary" onclick="showToast('🖨 Enviando a impresora...')">🖨 Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BLOQUEAR FECHA -->
+<div class="modal-overlay" id="modal-bloquear-fecha">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('bloquear-fecha')">×</button>
+    <div class="modal-title">Bloquear Fecha(s)</div>
+    <div style="display:flex;gap:12px;margin-bottom:12px">
+      <div class="fg" style="flex:1">
+        <label>Fecha inicial</label>
+        <input type="date" id="bloqueo-fecha-ini" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+      </div>
+      <div class="fg" style="flex:1">
+        <label>Fecha final</label>
+        <input type="date" id="bloqueo-fecha-fin" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Tipo</label>
+      <select id="bloqueo-tipo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+        <option value="cierre">Cierre del consultorio</option>
+        <option value="vacaciones">Vacaciones</option>
+        <option value="festivo">Día festivo</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Razón</label>
+      <input type="text" id="bloqueo-razon" placeholder="Ej. Vacaciones de la Dra." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div id="bloqueo-preview" style="display:none;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);padding:10px 14px;font-size:12px;color:#e74c3c;margin-bottom:12px"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('bloquear-fecha')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarBloqueo()">Bloquear</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="js/supabase.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/pacientes.js"></script>
+<script src="js/tratamientos.js"></script>
+<script src="js/inventario.js"></script>
+<script src="js/agenda.js"></script>
+<script src="js/pagos.js"></script>
+<script src="js/paquetes.js"></script>
+<script src="js/creditos.js"></script>
+<script src="js/caja.js"></script>
+<script src="js/reportes.js"></script>
+<script src="js/app.js"></script>
+
+
+</body>
+</html>
