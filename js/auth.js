@@ -3,53 +3,96 @@
 //  Software SIE © 2025
 // ─────────────────────────────────────────
 
-// Usuarios hardcoded por ahora (después se migra a Supabase Auth)
-const USUARIOS = [
-  { usuario: 'admin',     password: '1234',   nombre: 'Administrador', rol: 'admin' },
-  { usuario: 'recepcion', password: 'bsiluets', nombre: 'Recepción',   rol: 'recepcion' },
-];
+// ── HASH SHA-256 ──
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // ── LOGIN ──
 async function login() {
   const usuario  = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value.trim();
+  const password = document.getElementById('login-pass').value;
   const errEl    = document.getElementById('login-err');
 
-  errEl.style.display = 'none';
-
-  const encontrado = USUARIOS.find(u => u.usuario === usuario && u.password === password);
-
-  if (!encontrado) {
+  if (!usuario || !password) {
     errEl.style.display = 'block';
+    errEl.textContent   = 'Ingresa usuario y contraseña';
     return;
   }
 
-  // Verificar licencia antes de entrar
-  const activo = await verificarLicencia();
-  if (!activo) return;
+  const hash = await hashPassword(password);
+
+  const { data, error } = await db
+    .from('usuarios')
+    .select('id, nombre, usuario, rol, activo')
+    .eq('usuario', usuario)
+    .eq('password_hash', hash)
+    .eq('activo', true)
+    .single();
+
+  if (error || !data) {
+    errEl.style.display = 'block';
+    errEl.textContent   = 'Usuario o contraseña incorrectos';
+    return;
+  }
+
+  errEl.style.display = 'none';
 
   // Guardar sesión
   sessionStorage.setItem('bsiluets_user', JSON.stringify({
-    usuario:  encontrado.usuario,
-    nombre:   encontrado.nombre,
-    rol:      encontrado.rol,
-    ingreso:  new Date().toISOString()
+    id:     data.id,
+    nombre: data.nombre,
+    usuario: data.usuario,
+    rol:    data.rol
   }));
 
-  // Entrar al panel
-  document.getElementById('login-overlay').classList.remove('open');
-  document.getElementById('public-page').style.display  = 'none';
-  document.getElementById('admin-page').style.display   = 'flex';
+  closeLogin();
+  document.getElementById('public-page').style.display = 'none';
+  document.getElementById('admin-page').style.display  = 'flex';
 
-  // Mostrar nombre en sidebar
-  const sesion = getSesion();
-  if (sesion) {
-    document.querySelector('.su-info p').textContent   = sesion.nombre;
-    document.querySelector('.su-info span').textContent = sesion.usuario;
-    document.querySelector('.su-avatar').textContent    = sesion.nombre.charAt(0).toUpperCase();
-  }
+  // Mostrar nombre y rol en sidebar
+  const suInfo = document.querySelector('.su-info p');
+  const suSpan = document.querySelector('.su-info span');
+  if (suInfo) suInfo.textContent = data.nombre;
+  if (suSpan) suSpan.textContent = data.usuario;
 
+  // Aplicar permisos por rol
+  aplicarRol(data.rol);
   initAdmin();
+}
+
+// ── APLICAR ROL ──
+function aplicarRol(rol) {
+  const permisos = {
+    admin:        ['dashboard','agenda','pacientes','tratamientos','inventario','pagos','paquetes','creditos','reportes','caja','bot','config'],
+    recepcionista:['dashboard','agenda','pacientes','pagos','paquetes'],
+    capturista:   ['dashboard','pagos','paquetes']
+  };
+
+  const permitidos = permisos[rol] || permisos['recepcionista'];
+
+  // Ocultar módulos no permitidos en el sidebar
+  document.querySelectorAll('.nav-item[onclick]').forEach(item => {
+    const match = item.getAttribute('onclick').match(/showModule\('(\w+)'/);
+    if (match) {
+      const modulo = match[1];
+      item.style.display = permitidos.includes(modulo) ? '' : 'none';
+    }
+  });
+
+  // Ocultar nav-sections vacías
+  document.querySelectorAll('.nav-section').forEach(sec => {
+    let siguiente = sec.nextElementSibling;
+    let tieneVisible = false;
+    while (siguiente && !siguiente.classList.contains('nav-section')) {
+      if (siguiente.style.display !== 'none') tieneVisible = true;
+      siguiente = siguiente.nextElementSibling;
+    }
+    sec.style.display = tieneVisible ? '' : 'none';
+  });
 }
 
 // ── LOGOUT ──
@@ -59,21 +102,7 @@ function logout() {
   document.getElementById('public-page').style.display = 'block';
 }
 
-// ── OBTENER SESIÓN ──
-function getSesion() {
-  const data = sessionStorage.getItem('bsiluets_user');
-  return data ? JSON.parse(data) : null;
-}
-
-// ── VERIFICAR SESIÓN AL CARGAR ──
-function checkSesion() {
-  const sesion = getSesion();
-  if (sesion) {
-    document.getElementById('public-page').style.display  = 'none';
-    document.getElementById('admin-page').style.display   = 'flex';
-    document.querySelector('.su-info p').textContent       = sesion.nombre;
-    document.querySelector('.su-info span').textContent    = sesion.usuario;
-    document.querySelector('.su-avatar').textContent       = sesion.nombre.charAt(0).toUpperCase();
-    initAdmin();
-  }
+// ── VERIFICAR LICENCIA ──
+async function verificarLicencia() {
+  return true; // modo desarrollo
 }

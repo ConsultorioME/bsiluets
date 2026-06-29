@@ -120,7 +120,7 @@
     <input type="password" id="login-pass" placeholder="Contraseña" value="" onkeydown="if(event.key==='Enter')login()">
     <div class="login-error" id="login-err">Usuario o contraseña incorrectos</div>
     <button class="btn-entrar" onclick="login()">Ingresar al Panel</button>
-    <p style="font-size:11px;color:var(--cream);opacity:.25;margin-top:16px">Demo: admin / 1234</p>
+    <p style="font-size:11px;color:var(--cream);opacity:.25;margin-top:16px"></p>
   </div>
 </div>
 
@@ -608,14 +608,28 @@
             <div style="margin-top:12px"><div class="fg"><label>WhatsApp admin</label><input class="config-input" style="width:100%" value="311 000 0000"></div></div>
           </div>
           <div class="config-card">
-            <div class="config-title">Usuarios del Sistema</div>
-            <table>
-              <tr><th>Usuario</th><th>Rol</th><th>Estado</th></tr>
-              <tr><td>admin</td><td><span class="badge badge-gold">Administrador</span></td><td><span class="badge badge-green">Activo</span></td></tr>
-              <tr><td>recepcion</td><td><span class="badge badge-blue">Recepcionista</span></td><td><span class="badge badge-green">Activo</span></td></tr>
-            </table>
-            <button class="tb-btn" style="margin-top:14px">+ Agregar usuario</button>
+          <div class="config-title">Usuarios del Sistema</div>
+          <table>
+            <tr><th>Nombre / Usuario</th><th>Rol</th><th>Estado</th><th></th></tr>
+            <tbody id="tabla-usuarios"></tbody>
+          </table>
+          <button class="tb-btn" style="margin-top:14px" onclick="openModal('nuevo-usuario')">+ Agregar usuario</button>
+          <div style="margin-top:16px;background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.1);padding:14px;font-size:12px">
+            <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:10px">Descripción de roles</div>
+            <div style="margin-bottom:8px;color:var(--cream);opacity:.7">
+              <span class="badge badge-gold" style="font-size:10px;margin-right:6px">Administrador</span>
+              Acceso completo — todos los módulos, configuración y usuarios.
+            </div>
+            <div style="margin-bottom:8px;color:var(--cream);opacity:.7">
+              <span class="badge badge-blue" style="font-size:10px;margin-right:6px">Recepcionista</span>
+              Acceso a: Dashboard, Agenda, Pacientes, Pagos y Paquetes & Visitas.
+            </div>
+            <div style="color:var(--cream);opacity:.7">
+              <span class="badge badge-gray" style="font-size:10px;margin-right:6px">Capturista</span>
+              Acceso limitado a: Dashboard, Pagos y Paquetes & Visitas.
+            </div>
           </div>
+        </div>
 
           <div class="config-card">
             <div class="config-title">Bloqueo de Fechas</div>
@@ -1058,6 +1072,42 @@
     </div>
   </div>
 </div>
+
+<!-- MODAL: USUARIO -->
+<div class="modal-overlay" id="modal-nuevo-usuario">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close" onclick="closeModal('nuevo-usuario')">×</button>
+    <div class="modal-title" id="usuario-modal-title">Nuevo Usuario</div>
+    <input type="hidden" id="usr-id">
+    <div class="fg" style="margin-bottom:12px">
+      <label>Nombre completo</label>
+      <input id="usr-nombre" placeholder="Ej. María García" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Usuario</label>
+      <input id="usr-usuario" placeholder="Ej. recepcion" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Contraseña</label>
+      <input type="password" id="usr-password" placeholder="Mínimo 6 caracteres" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Rol</label>
+      <select id="usr-rol" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+        <option value="admin">Administrador</option>
+        <option value="recepcionista">Recepcionista</option>
+        <option value="capturista">Capturista</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nuevo-usuario')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarUsuario()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+
 
 <!-- TOAST -->
 <div id="toast"></div>

@@ -42,7 +42,7 @@ function showModule(id,el){
   if(id==='creditos') initCreditos();
   if(id==='caja') initCaja();
   if(id==='reportes') initReportes();
-  if(id==='config') cargarFechasBloqueadasConfig();
+  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); }
   
 }
 
@@ -113,4 +113,96 @@ function showModTab(id, el) {
   el.closest('.module').querySelectorAll('.mod-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   el.classList.add('active');
+}
+
+
+// ─── USUARIOS ───
+async function cargarUsuarios() {
+  const tbody = document.getElementById('tabla-usuarios');
+  if (!tbody) return;
+
+  const { data, error } = await db
+    .from('usuarios')
+    .select('id, nombre, usuario, rol, activo')
+    .order('created_at', { ascending: true });
+
+  if (error || !data) return;
+
+  const rolBadge = { admin:'badge-gold', recepcionista:'badge-blue', capturista:'badge-gray' };
+  const rolLabel = { admin:'Administrador', recepcionista:'Recepcionista', capturista:'Capturista' };
+
+  tbody.innerHTML = data.map(u => `<tr>
+    <td>
+      <div style="font-weight:500">${u.nombre}</div>
+      <div style="font-size:11px;opacity:.5">${u.usuario}</div>
+    </td>
+    <td><span class="badge ${rolBadge[u.rol]||'badge-gray'}" style="font-size:10px">${rolLabel[u.rol]||u.rol}</span></td>
+    <td>${u.activo ? '<span class="badge badge-green" style="font-size:10px">Activo</span>' : '<span class="badge badge-red" style="font-size:10px">Inactivo</span>'}</td>
+    <td>
+      <button class="tb-btn" style="padding:3px 7px;font-size:10px;margin-right:4px" onclick="editarUsuario('${u.id}')">✏</button>
+      ${u.usuario !== 'admin' ? `<button class="tb-btn danger" style="padding:3px 7px;font-size:10px" onclick="toggleUsuario('${u.id}',${u.activo})">${u.activo ? '🔒' : '🔓'}</button>` : ''}
+    </td>
+  </tr>`).join('');
+}
+
+async function guardarUsuario() {
+  const id       = document.getElementById('usr-id').value;
+  const nombre   = document.getElementById('usr-nombre').value.trim();
+  const usuario  = document.getElementById('usr-usuario').value.trim();
+  const password = document.getElementById('usr-password').value;
+  const rol      = document.getElementById('usr-rol').value;
+
+  if (!nombre)  { showToast('⚠ El nombre es obligatorio'); return; }
+  if (!usuario) { showToast('⚠ El usuario es obligatorio'); return; }
+  if (!id && !password) { showToast('⚠ La contraseña es obligatoria'); return; }
+  if (password && password.length < 6) { showToast('⚠ La contraseña debe tener mínimo 6 caracteres'); return; }
+
+  const datos = { nombre, usuario, rol };
+
+  if (password) {
+    datos.password_hash = await hashPassword(password);
+  }
+
+  let error;
+  if (id) {
+    ({ error } = await db.from('usuarios').update(datos).eq('id', id));
+  } else {
+    ({ error } = await db.from('usuarios').insert([datos]));
+  }
+
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  closeModal('nuevo-usuario');
+  limpiarFormUsuario();
+  showToast(id ? '✓ Usuario actualizado' : '✓ Usuario creado correctamente');
+  cargarUsuarios();
+}
+
+async function editarUsuario(id) {
+  const { data: u, error } = await db.from('usuarios').select('*').eq('id', id).single();
+  if (error || !u) { showToast('❌ Error al cargar'); return; }
+
+  document.getElementById('usr-id').value      = u.id;
+  document.getElementById('usr-nombre').value  = u.nombre;
+  document.getElementById('usr-usuario').value = u.usuario;
+  document.getElementById('usr-password').value = '';
+  document.getElementById('usr-rol').value     = u.rol;
+  document.getElementById('usuario-modal-title').textContent = 'Editar Usuario';
+  openModal('nuevo-usuario');
+}
+
+async function toggleUsuario(id, activo) {
+  const { error } = await db.from('usuarios').update({ activo: !activo }).eq('id', id);
+  if (error) { showToast('❌ Error'); return; }
+  showToast(activo ? '🔒 Usuario desactivado' : '🔓 Usuario activado');
+  cargarUsuarios();
+}
+
+function limpiarFormUsuario() {
+  ['usr-id','usr-nombre','usr-usuario','usr-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('usr-rol').value = 'recepcionista';
+  document.getElementById('usuario-modal-title').textContent = 'Nuevo Usuario';
 }
