@@ -56,7 +56,10 @@ async function cargarInventario(busqueda = '') {
       <td><span class="qty-badge ${stockClass}">${stock % 1 === 0 ? stock : stock.toFixed(2)}</span></td>
       <td>${p.unidad || '—'}</td>
       <td style="opacity:.6">${min % 1 === 0 ? min : min.toFixed(2)}</td>
-      <td style="color:var(--gold)">${p.precio_venta > 0 ? '$' + parseFloat(p.precio_venta).toLocaleString() : '—'}</td>
+      <td style="color:var(--gold)">
+        ${p.precio_venta > 0 ? '$' + parseFloat(p.precio_venta).toLocaleString() : '—'}
+        ${p.precio_compra > 0 ? `<div style="font-size:10px;opacity:.4">Costo: $${parseFloat(p.precio_compra).toLocaleString()} · Margen: ${(((p.precio_venta-p.precio_compra)/p.precio_venta)*100).toFixed(0)}%</div>` : ''}
+      </td>
       <td>${estadoBadge}</td>
       <td style="display:flex;gap:6px">
         <button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="event.stopPropagation();ajustarStock(\`${p.id}\`,\`${p.nombre}\`,${stock},\`${p.unidad}\`)">± Stock</button>
@@ -90,6 +93,7 @@ async function guardarProducto() {
     unidad:       document.getElementById('prod-unidad').value,
     stock_minimo: parseFloat(document.getElementById('prod-stock-min').value) || 0,
     precio_venta: parseFloat(document.getElementById('prod-precio').value) || 0,
+    precio_compra: parseFloat(document.getElementById('prod-precio-compra').value) || 0,
   };
 
   if (!datos.nombre) { showToast('⚠ El nombre es obligatorio'); return; }
@@ -122,6 +126,7 @@ async function editarProducto(id) {
   document.getElementById('prod-unidad').value      = p.unidad || 'kg';
   document.getElementById('prod-stock-min').value   = p.stock_minimo;
   document.getElementById('prod-precio').value      = p.precio_venta;
+  document.getElementById('prod-precio-compra').value = p.precio_compra || 0;
 
   document.querySelector('#modal-nuevo-prod .modal-title').textContent = 'Editar Producto';
   openModal('nuevo-prod');
