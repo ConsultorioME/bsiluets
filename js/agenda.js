@@ -6,12 +6,26 @@
 let calDate = new Date();
 let fechaSeleccionada = new Date().toISOString().split('T')[0];
 
+// ── AGENDA ACTIVA ──
+let agendaActiva = 'Dra. Bianca Salas';
+
+function selAgenda(tipo, el) {
+  agendaActiva = tipo;
+  document.querySelectorAll('.agenda-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCal();
+  if (fechaSeleccionada) cargarCitasDia(fechaSeleccionada);
+}
+
+
 // ── INICIALIZAR AGENDA ──
 async function initAgenda() {
   renderCal();
   await cargarCitasDia(fechaSeleccionada);
   await cargarSelectsPacientesTratamientos();
   marcarDiasConCitas();
+  await marcarDiasConCitas();
+  await cargarFechasBloqueadas();
 }
 
 // ── RENDER CALENDARIO ──
@@ -59,6 +73,7 @@ function renderCal() {
   }
 
   cargarFechasBloqueadas();
+  marcarDiasConCitas();
 }
 
 function calNav(dir) {
@@ -90,9 +105,10 @@ async function cargarCitasDia(fecha) {
 
   const { data, error } = await db
     .from('agenda')
-    .select('*, pacientes(nombre, apellidos), tratamientos(nombre)')
+    .select('*, pacientes(nombre,apellidos), tratamientos(nombre)')
     .eq('fecha', fecha)
-    .order('hora', { ascending: true });
+    .eq('agenda_tipo', agendaActiva)
+    .order('hora');
 
   if (error) {
     slotList.innerHTML = `<div style="color:#e74c3c;padding:16px;font-size:13px">Error: ${error.message}</div>`;
@@ -167,6 +183,7 @@ async function guardarCita() {
     duracion_min:   parseInt(document.getElementById('cita-duracion').value) || 60,
     estado:         document.getElementById('cita-estado').value,
     notas:          document.getElementById('cita-notas').value.trim(),
+    agenda_tipo:    agendaActiva,
   };
   if (!datos.fecha) { showToast('⚠ La fecha es obligatoria'); return; }
   if (!datos.hora)  { showToast('⚠ La hora es obligatoria'); return; }
@@ -243,7 +260,8 @@ async function marcarDiasConCitas() {
     .from('agenda')
     .select('fecha')
     .gte('fecha', desde)
-    .lte('fecha', hasta);
+    .lte('fecha', hasta)
+    .eq('agenda_tipo', agendaActiva);
 
   if (!data || data.length === 0) return;
 

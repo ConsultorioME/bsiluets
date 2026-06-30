@@ -216,6 +216,12 @@
 
       <!-- AGENDA -->
       <div class="module" id="mod-agenda">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="agenda-tab active" onclick="selAgenda('Dra. Bianca Salas',this)">🩺 Dra. Bianca Salas</button>
+          <button class="agenda-tab" onclick="selAgenda('Legacy',this)">💆 Legacy</button>
+          <button class="agenda-tab" onclick="selAgenda('Versa',this)">✨ Versa</button>
+          <button class="agenda-tab" onclick="selAgenda('Depilación',this)">🪒 Depilación</button>
+        </div>
         <div class="agenda-admin">
           <div>
             <div class="mini-cal">
@@ -330,7 +336,7 @@
             <table>
               <tr>
                 <th>Producto</th><th>Categoría</th><th>Stock</th><th>Unidad</th>
-                <th>Stock mín.</th><th>Precio venta</th><th>Estado</th><th></th>
+                <th>Stock mín.</th><th>P. Compra</th><th>P. Venta</th><th>Margen</th><th>Estado</th><th></th>
               </tr>
               <tbody id="tabla-inventario"></tbody>
             </table>
@@ -804,29 +810,30 @@
     </div>
   </div>
 
-<div class="modal-overlay" id="modal-nueva-cita">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('nueva-cita')">×</button>
-    <div class="modal-title">Nueva Cita</div>
-    <input type="hidden" id="cita-id">
-    <div class="form-row">
-      <div class="fg"><label>Paciente</label>
-        <select id="cita-paciente">
-          <option value="">Seleccionar...</option>
-        </select>
+  <div class="modal-overlay" id="modal-nueva-cita">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('nueva-cita')">×</button>
+      <div class="modal-title">Nueva Cita</div>
+      <input type="hidden" id="cita-id">
+      <div class="form-row">
+        <div class="fg"><label>Paciente</label>
+          <select id="cita-paciente">
+            <option value="">Seleccionar...</option>
+          </select>
+        </div>
+        <div class="fg"><label>Tratamiento</label>
+          <select id="cita-tratamiento">
+            <option value="">Seleccionar...</option>
+          </select>
+        </div>
       </div>
-      <div class="fg"><label>Tratamiento</label>
-        <select id="cita-tratamiento">
-          <option value="">Seleccionar...</option>
-        </select>
+      <div class="form-row">
+        <div class="fg"><label>Fecha</label><input type="date" id="cita-fecha" onchange="checkFechaBloqueada(this.value)"></div>
+        <div class="fg"><label>Hora</label><input type="time" id="cita-hora"></div>
       </div>
-    </div>
-    <div class="form-row">
-      <div class="fg"><label>Precio de compra</label><input id="prod-precio-compra" type="number" step="0.01" placeholder="0.00"></div>
-      <div class="fg"><label>Precio de venta</label><input id="prod-precio" type="number" step="0.01" placeholder="0.00"></div>
-    </div>
-    <div class="form-row full"><div class="fg"><label>Proveedor (opcional)</label><input id="prod-proveedor" placeholder="Nombre del proveedor"></div></div>
-    <div class="form-row">
+      <div id="alerta-fecha-bloqueada" style="display:none;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);padding:10px 14px;font-size:12px;color:#e74c3c;margin-top:6px"></div>
+      <div class="form-row">
+        
       <div class="fg"><label>Duración</label>
         <select id="cita-duracion">
           <option value="30">30 min</option>
@@ -924,9 +931,10 @@
       <div class="fg"><label>Stock mínimo</label><input id="prod-stock-min" type="number" step="0.25" placeholder="0.00"></div>
     </div>
     <div class="form-row">
+      <div class="fg"><label>Precio de compra</label><input id="prod-precio-compra" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fg"><label>Precio de venta</label><input id="prod-precio" type="number" step="0.01" placeholder="0.00"></div>
-      <div class="fg"><label>Proveedor (opcional)</label><input id="prod-proveedor" placeholder="Nombre del proveedor"></div>
     </div>
+    <div class="form-row full"><div class="fg"><label>Proveedor (opcional)</label><input id="prod-proveedor" placeholder="Nombre del proveedor"></div></div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('nuevo-prod');limpiarFormProd()">Cancelar</button>
       <button class="btn-primary" onclick="guardarProducto()">Guardar</button>

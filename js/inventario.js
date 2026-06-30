@@ -8,7 +8,7 @@ async function cargarInventario(busqueda = '') {
   const tbody = document.getElementById('tabla-inventario');
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;opacity:.4;padding:24px">Cargando...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:.4;padding:24px">Cargando...</td></tr>`;
 
   const categoria = document.getElementById('filtro-inv-cat')?.value || '';
 
@@ -28,12 +28,12 @@ async function cargarInventario(busqueda = '') {
   const { data, error } = await query;
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="8" style="color:#e74c3c;padding:16px">Error: ${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="color:#e74c3c;padding:16px">Error: ${error.message}</td></tr>`;
     return;
   }
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;opacity:.35;padding:24px">No se encontraron productos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;opacity:.35;padding:24px">No se encontraron productos</td></tr>`;
     renderAlertas([]);
     return;
   }
@@ -56,10 +56,9 @@ async function cargarInventario(busqueda = '') {
       <td><span class="qty-badge ${stockClass}">${stock % 1 === 0 ? stock : stock.toFixed(2)}</span></td>
       <td>${p.unidad || '—'}</td>
       <td style="opacity:.6">${min % 1 === 0 ? min : min.toFixed(2)}</td>
-      <td style="color:var(--gold)">
-        ${p.precio_venta > 0 ? '$' + parseFloat(p.precio_venta).toLocaleString() : '—'}
-        ${p.precio_compra > 0 ? `<div style="font-size:10px;opacity:.4">Costo: $${parseFloat(p.precio_compra).toLocaleString()} · Margen: ${(((p.precio_venta-p.precio_compra)/p.precio_venta)*100).toFixed(0)}%</div>` : ''}
-      </td>
+      <td style="color:var(--cream);opacity:.6">${p.precio_compra > 0 ? '$' + parseFloat(p.precio_compra).toLocaleString() : '—'}</td>
+      <td style="color:var(--gold)">${p.precio_venta > 0 ? '$' + parseFloat(p.precio_venta).toLocaleString() : '—'}</td>
+      <td style="color:#27AE60;font-size:12px">${p.precio_compra > 0 && p.precio_venta > 0 ? (((p.precio_venta - p.precio_compra) / p.precio_venta) * 100).toFixed(0) + '%' : '—'}</td>
       <td>${estadoBadge}</td>
       <td style="display:flex;gap:6px">
         <button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="event.stopPropagation();ajustarStock(\`${p.id}\`,\`${p.nombre}\`,${stock},\`${p.unidad}\`)">± Stock</button>

@@ -385,3 +385,5 @@ tr:hover td{background:rgba(201,168,108,.04);opacity:1}
 .nota-linea{border-top:1px solid #ddd;padding-top:5px;margin-top:22px}
 .nota-footer-txt{text-align:center;font-size:10px;color:#aaa;margin-top:14px;border-top:1px solid #f0e8d8;padding-top:10px}
 .info-box-mod{background:rgba(201,168,108,.05);border-left:3px solid rgba(201,168,108,.3);padding:11px 15px;font-size:13px;color:var(--cream);opacity:.65;margin-bottom:18px;line-height:1.6}
+.agenda-tab{background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);opacity:.5;padding:8px 16px;font-family:'Jost',sans-serif;font-size:12px;letter-spacing:.08em;cursor:pointer;transition:all .2s}
+.agenda-tab.active{border-color:var(--gold);color:var(--gold);opacity:1;background:rgba(201,168,108,.08)}
