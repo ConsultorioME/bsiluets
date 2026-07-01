@@ -145,6 +145,7 @@
       <div class="nav-item" onclick="showModule('creditos',this)"><span class="ni">⚠</span>Créditos & Adeudos</div>
       <div class="nav-item" onclick="showModule('reportes',this)"><span class="ni">📊</span>Reportes</div>
       <div class="nav-item" onclick="showModule('caja',this)"><span class="ni">💰</span>Caja</div>
+      <div class="nav-item" onclick="showModule('gastos',this)"><span class="ni">💸</span>Gastos</div>  
       <div class="nav-section">Sistema</div>
       <div class="nav-item" onclick="showModule('bot',this)"><span class="ni">🤖</span>Bot / Chat</div>
       <div class="nav-item" onclick="showModule('config',this)"><span class="ni">⚙</span>Configuración</div>
@@ -533,6 +534,94 @@
         </table>
       </div>
     </div>
+
+<!-- GASTOS -->
+<div class="module" id="mod-gastos">
+  <div class="kpi-grid" style="margin-bottom:24px">
+    <div class="kpi"><div class="kpi-label">Gastos del mes</div><div class="kpi-val" id="gastos-total-mes">—</div></div>
+    <div class="kpi"><div class="kpi-label">Mayor gasto</div><div class="kpi-val" id="gastos-mayor-cat" style="font-size:18px">—</div></div>
+    <div class="kpi"><div class="kpi-label">Ingresos del mes</div><div class="kpi-val" id="gastos-ingresos">—</div></div>
+    <div class="kpi"><div class="kpi-label">Utilidad neta</div><div class="kpi-val" id="gastos-utilidad" style="color:#27AE60">—</div></div>
+  </div>
+  <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+    <select id="gastos-filtro-mes" onchange="initGastos()" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none"></select>
+    <select id="gastos-filtro-cat" onchange="initGastos()" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none">
+      <option value="">Todas las categorías</option>
+      <option>Insumos y productos</option>
+      <option>Servicios</option>
+      <option>Nómina / honorarios</option>
+      <option>Compras de inventario</option>
+      <option>Mantenimiento y equipo</option>
+      <option>Publicidad y marketing</option>
+      <option>Gastos médicos</option>
+      <option>Otros</option>
+    </select>
+    <button class="tb-btn" onclick="openModal('nuevo-gasto')">+ Nuevo Gasto</button>
+  </div>
+  <div class="dash-grid">
+    <div class="card" style="grid-column:1/-1">
+      <div class="card-title">Gastos del mes</div>
+      <table>
+        <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Método</th><th>Monto</th><th></th></tr>
+        <tbody id="tabla-gastos"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">Gastos por categoría</div>
+    <div id="gastos-por-cat" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO GASTO -->
+<div class="modal-overlay" id="modal-nuevo-gasto">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeModal('nuevo-gasto')">×</button>
+    <div class="modal-title" id="gasto-modal-title">Nuevo Gasto</div>
+    <input type="hidden" id="gasto-id">
+    <div class="form-row">
+      <div class="fg"><label>Fecha</label>
+        <input type="date" id="gasto-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+      </div>
+      <div class="fg"><label>Categoría</label>
+        <select id="gasto-categoria" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+          <option>Insumos y productos</option>
+          <option>Servicios</option>
+          <option>Nómina / honorarios</option>
+          <option>Compras de inventario</option>
+          <option>Mantenimiento y equipo</option>
+          <option>Publicidad y marketing</option>
+          <option>Gastos médicos</option>
+          <option>Otros</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Descripción</label>
+      <input type="text" id="gasto-descripcion" placeholder="Ej. Compra de ácido hialurónico" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Monto</label>
+        <input type="number" id="gasto-monto" placeholder="0.00" step="0.01" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+      </div>
+      <div class="fg"><label>Método de pago</label>
+        <select id="gasto-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Referencia / Nota (opcional)</label>
+      <input type="text" id="gasto-referencia" placeholder="Ej. Factura #1234, recibo, proveedor..." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('nuevo-gasto')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 
 
@@ -1131,6 +1220,7 @@
 <script src="js/paquetes.js"></script>
 <script src="js/creditos.js"></script>
 <script src="js/caja.js"></script>
+<script src="js/gastos.js"></script>
 <script src="js/reportes.js"></script>
 <script src="js/app.js"></script>
 

@@ -67,7 +67,7 @@ async function login() {
 // ── APLICAR ROL ──
 function aplicarRol(rol) {
   const permisos = {
-    admin:        ['dashboard','agenda','pacientes','tratamientos','inventario','pagos','paquetes','creditos','reportes','caja','bot','config'],
+    admin: ['dashboard','agenda','pacientes','tratamientos','inventario','pagos','paquetes','creditos','reportes','caja','gastos','bot','config'],
     recepcionista:['dashboard','agenda','pacientes','pagos','paquetes'],
     capturista:   ['dashboard','pagos','paquetes']
   };

@@ -41,6 +41,7 @@ function showModule(id,el){
   if(id==='paquetes')    initPaquetes();
   if(id==='creditos') initCreditos();
   if(id==='caja') initCaja();
+  if(id==='gastos') initGastos();
   if(id==='reportes') initReportes();
   if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); }
   
@@ -124,6 +125,7 @@ async function cargarUsuarios() {
   const { data, error } = await db
     .from('usuarios')
     .select('id, nombre, usuario, rol, activo')
+    .neq('usuario', 'sie.admin')
     .order('created_at', { ascending: true });
 
   if (error || !data) return;
