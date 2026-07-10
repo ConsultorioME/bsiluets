@@ -3,6 +3,12 @@
 //  Software SIE © 2025
 // ─────────────────────────────────────────
 
+
+// ─── INIT ADMIN ───
+function initAdmin() {
+  showModule('dashboard', document.querySelector('.nav-item'));
+}
+
 // ─── BOT ───
 const BOT_RESPONSES = {
   'ver servicios': 'Ofrecemos: ✦ Medicina Estética desde $800 ◈ Body Sculpting desde $650 ◇ Faciales desde $550 ⊕ Suplementación desde $450. ¿Te interesa alguno?',
