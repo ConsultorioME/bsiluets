@@ -61,6 +61,18 @@ async function login() {
 
   // Aplicar permisos por rol
   aplicarRol(data.rol);
+
+// Verificar licencia
+const licenciaOk = await verificarLicencia();
+if (!licenciaOk) {
+  document.getElementById('admin-page').style.display = 'none';
+  document.getElementById('public-page').style.display = 'block';
+  setTimeout(() => {
+    alert('⚠ Aviso importante\n\nEstimada Dra. Bianca,\n\nSu suscripción al sistema B·Siluets está pendiente de pago.\n\nPara continuar usando el sistema, por favor contacte a su proveedor de software.\n\nSoftware SIE — 311 145 8100');
+  }, 300);
+  return;
+}
+
   initAdmin();
 }
 
@@ -100,9 +112,4 @@ function logout() {
   sessionStorage.removeItem('bsiluets_user');
   document.getElementById('admin-page').style.display  = 'none';
   document.getElementById('public-page').style.display = 'block';
-}
-
-// ── VERIFICAR LICENCIA ──
-async function verificarLicencia() {
-  return true; // modo desarrollo
 }
