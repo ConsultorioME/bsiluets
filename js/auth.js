@@ -66,10 +66,20 @@ async function login() {
 const licenciaOk = await verificarLicencia();
 if (!licenciaOk) {
   document.getElementById('admin-page').style.display = 'none';
-  document.getElementById('public-page').style.display = 'block';
-  setTimeout(() => {
-    alert('⚠ Aviso importante\n\nEstimada Clínica B\'Siluets,\n\nSu suscripción al sistema está pendiente de pago.\n\nPara continuar usando el sistema, por favor contacte a su proveedor de software.\n\nSoftware SIE — 311-267-2863');
-  }, 300);
+  document.getElementById('public-page').style.display = 'none';
+  document.body.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F0F0F;font-family:'Jost',sans-serif;text-align:center;padding:40px">
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:36px;color:#C9A86C;margin-bottom:8px">B·Siluets</div>
+        <div style="font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#666;margin-bottom:40px">Sistema de Gestión</div>
+        <div style="width:40px;height:1px;background:#C9A86C;margin:0 auto 40px"></div>
+        <div style="font-size:14px;color:#FAF7F2;opacity:.5;line-height:2;max-width:380px;margin:0 auto">
+          El acceso al sistema está temporalmente suspendido.<br>
+          Para restablecer el servicio, por favor contacte<br>a su proveedor de software.
+        </div>
+        <div style="margin-top:48px;font-size:13px;color:#C9A86C;opacity:.6;letter-spacing:.1em">Software SIE &nbsp;·&nbsp; 311-267-2863</div>
+      </div>
+    </div>`;
   return;
 }
 
