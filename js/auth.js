@@ -68,7 +68,7 @@ if (!licenciaOk) {
   document.getElementById('admin-page').style.display = 'none';
   document.getElementById('public-page').style.display = 'block';
   setTimeout(() => {
-    alert('⚠ Aviso importante\n\nEstimada Dra. Bianca,\n\nSu suscripción al sistema B·Siluets está pendiente de pago.\n\nPara continuar usando el sistema, por favor contacte a su proveedor de software.\n\nSoftware SIE — 311 145 8100');
+    alert('⚠ Aviso importante\n\nEstimada Clínica B\'Siluets,\n\nSu suscripción al sistema está pendiente de pago.\n\nPara continuar usando el sistema, por favor contacte a su proveedor de software.\n\nSoftware SIE — 311-267-2863');
   }, 300);
   return;
 }
