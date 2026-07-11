@@ -9,9 +9,16 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ─── SWITCH DE LICENCIA (activar cuando esté listo el SIE) ───
+// ─── VERIFICAR LICENCIA ───
 async function verificarLicencia() {
-  return true; // modo desarrollo
+  const { data, error } = await db
+    .from('licencias')
+    .select('*')
+    .eq('sistema', 'bsiluets')
+    .single();
+
+  if (error || !data) return true;
+  return data.activo;
 }
 
 function mostrarSuspendido(mensaje) {
