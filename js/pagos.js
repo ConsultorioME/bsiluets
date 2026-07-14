@@ -13,6 +13,13 @@ async function initPagos() {
   await cargarSelectTratamientosPagos();
   await cargarSelectSuplementosPagos();
   await cargarUltimosCobros();
+
+  // Al cambiar tipo consulta, actualizar precio sugerido
+document.getElementById('pago-consulta-tipo')?.addEventListener('change', function() {
+  const precioEl = document.getElementById('pago-consulta-precio');
+  if (precioEl) { precioEl.value = this.value; precioEl.dataset.editado = ''; }
+});
+
 }
 
 // ── CARGAR SELECTS ──
@@ -38,6 +45,13 @@ async function cargarSelectTratamientosPagos() {
       data.map(t => `<option value="${t.precio}" data-id="${t.id}" data-nombre="${t.nombre}">
         ${t.nombre} ($${parseFloat(t.precio).toLocaleString()})</option>`).join('');
   }
+
+  document.getElementById('pago-tratamiento')?.addEventListener('change', function() {
+    const precio = this.options[this.selectedIndex]?.value || 0;
+    const precioEl = document.getElementById('pago-trat-precio');
+    if (precioEl) precioEl.value = precio > 0 ? precio : '';
+  });
+
 }
 
 async function cargarSelectSuplementosPagos() {
@@ -50,30 +64,47 @@ async function cargarSelectSuplementosPagos() {
           ${p.nombre} ($${parseFloat(p.precio_venta).toLocaleString()}/${p.unidad})</option>`
       ).join('');
   }
+
+  document.getElementById('pago-suplemento')?.addEventListener('change', function() {
+    const precio = this.options[this.selectedIndex]?.value || 0;
+    const precioEl = document.getElementById('pago-supl-precio');
+    if (precioEl) precioEl.value = precio > 0 ? precio : '';
+  });
+
 }
 
 // ── RECALCULAR TOTALES ──
 function recalcPago() {
+
+// Sincronizar precio consulta con select SOLO si no ha sido editado manualmente
+const selConsulta = document.getElementById('pago-consulta-tipo');
+const precioConsulta = document.getElementById('pago-consulta-precio');
+if (selConsulta && precioConsulta && precioConsulta.value === '') {
+  precioConsulta.value = selConsulta.value;
+}
+
+
   // Consulta
   const chkConsulta = document.getElementById('chk-consulta');
   const bloqConsulta = document.getElementById('consulta-block');
   if (bloqConsulta) bloqConsulta.style.display = chkConsulta?.checked ? 'block' : 'none';
   const montoConsulta = chkConsulta?.checked
-    ? parseFloat(document.getElementById('pago-consulta-tipo')?.value || 0) : 0;
+    ? parseFloat(document.getElementById('pago-consulta-precio')?.value || document.getElementById('pago-consulta-tipo')?.value || 0) : 0;
 
   // Tratamiento
   const chkTrat = document.getElementById('chk-trat');
   const bloqTrat = document.getElementById('trat-block');
   if (bloqTrat) bloqTrat.style.display = chkTrat?.checked ? 'block' : 'none';
   const montoTrat = chkTrat?.checked
-    ? parseFloat(document.getElementById('pago-tratamiento')?.value || 0) : 0;
+    ? parseFloat(document.getElementById('pago-trat-precio')?.value || document.getElementById('pago-tratamiento')?.value || 0) : 0;
 
   // Suplementos
   const chkSupl = document.getElementById('chk-supl');
   const bloqSupl = document.getElementById('supl-block');
   if (bloqSupl) bloqSupl.style.display = chkSupl?.checked ? 'block' : 'none';
+  const precioSuplEdit = document.getElementById('pago-supl-precio')?.value;
   const precioSupl = chkSupl?.checked
-    ? parseFloat(document.getElementById('pago-suplemento')?.value || 0) : 0;
+    ? parseFloat(precioSuplEdit && parseFloat(precioSuplEdit) > 0 ? precioSuplEdit : document.getElementById('pago-suplemento')?.value || 0) : 0;
   const qty = chkSupl?.checked
     ? parseFloat(document.getElementById('pago-supl-qty')?.value || 1) : 0;
   const montoSupl = precioSupl * qty;
@@ -118,15 +149,16 @@ async function registrarCobro() {
   }
 
   const montoConsulta = chkConsulta
-    ? parseFloat(document.getElementById('pago-consulta-tipo').value || 0) : 0;
+    ? parseFloat(document.getElementById('pago-consulta-precio')?.value || document.getElementById('pago-consulta-tipo').value || 0) : 0;
 
   const tratSel = document.getElementById('pago-tratamiento');
-  const montoTrat = chkTrat ? parseFloat(tratSel.value || 0) : 0;
+  const montoTrat = chkTrat ? parseFloat(document.getElementById('pago-trat-precio')?.value || tratSel.value || 0) : 0;
   const tratId    = chkTrat ? tratSel.options[tratSel.selectedIndex]?.dataset?.id || null : null;
   const tratNombre = chkTrat ? tratSel.options[tratSel.selectedIndex]?.dataset?.nombre || '' : '';
 
   const suplSel = document.getElementById('pago-suplemento');
-  const precioSupl = chkSupl ? parseFloat(suplSel.value || 0) : 0;
+  const precioSuplEditado = document.getElementById('pago-supl-precio')?.value;
+  const precioSupl = chkSupl ? parseFloat(precioSuplEditado > 0 ? precioSuplEditado : suplSel.value || 0) : 0;
   const qty = chkSupl ? parseFloat(document.getElementById('pago-supl-qty').value || 1) : 0;
   const montoSupl = precioSupl * qty;
   const suplId    = chkSupl ? suplSel.options[suplSel.selectedIndex]?.dataset?.id || null : null;

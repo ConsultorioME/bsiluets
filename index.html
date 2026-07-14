@@ -373,10 +373,13 @@
           <div id="consulta-block" style="display:none">
             <div class="fg">
               <label>Tipo de consulta</label>
-              <select id="pago-consulta-tipo" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                <option value="350">Consulta general ($350)</option>
-                <option value="200">Consulta de seguimiento ($200)</option>
-              </select>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <select id="pago-consulta-tipo" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                  <option value="350">Consulta general ($350)</option>
+                  <option value="200">Consulta de seguimiento ($200)</option>
+                </select>
+                <input type="number" id="pago-consulta-precio" step="0.01" placeholder="0.00" oninput="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+              </div>
             </div>
           </div>
         </div>
@@ -392,6 +395,9 @@
                 <select id="pago-tratamiento" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
                   <option value="0">Seleccionar...</option>
                 </select>
+              </div>
+              <div class="fg"><label>Precio tratamiento ($)</label>
+                <input type="number" id="pago-trat-precio" step="0.01" placeholder="0.00" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
               </div>
             </div>
           </div>
@@ -411,6 +417,9 @@
               </div>
               <div class="fg"><label>Cantidad</label>
                 <input type="number" id="pago-supl-qty" step="0.25" min="0.25" value="1" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                </div>
+                <div class="fg"><label>Precio unitario ($)</label>
+                <input type="number" id="pago-supl-precio" step="0.01" placeholder="0.00" oninput="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
               </div>
             </div>
           </div>
