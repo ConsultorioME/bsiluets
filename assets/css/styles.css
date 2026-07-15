@@ -158,10 +158,10 @@ body{font-family:'Jost',sans-serif;background:var(--black);color:var(--cream);mi
 .tb-btn.danger{border-color:rgba(192,57,43,.3);color:#e74c3c}
 .tb-btn.danger:hover{background:rgba(192,57,43,.1)}
 
-.admin-content{flex:1;overflow-y:auto;padding:28px}
+.admin-content{flex:1;overflow-y:auto;padding:0}
 
 /* MODULE PANELS */
-.module{display:none}
+.module{display:none;padding:28px}
 .module.active{display:block}
 
 /* DASHBOARD */
@@ -336,7 +336,7 @@ tr:hover td{background:rgba(201,168,108,.04);opacity:1}
 .as-title{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.7}
 
 /* ─── PAQUETES / VISITAS / CRÉDITOS ─── */
-.mod-tabs{display:flex;gap:0;border-bottom:1px solid rgba(201,168,108,.12);margin-bottom:24px}
+.mod-tabs{display:flex;gap:0;border-bottom:1px solid rgba(201,168,108,.12);margin-bottom:16px;margin-top:0}
 .mod-tab{padding:10px 22px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;color:var(--cream);opacity:.4;border-bottom:2px solid transparent;transition:.25s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Jost',sans-serif}
 .mod-tab:hover{opacity:.7}
 .mod-tab.active{opacity:1;color:var(--gold);border-bottom-color:var(--gold)}

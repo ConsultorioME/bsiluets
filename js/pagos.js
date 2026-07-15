@@ -4,6 +4,8 @@
 // ─────────────────────────────────────────
 
 let metodoSeleccionado = 'efectivo';
+let tratCounter = 0;
+let suplCounter = 0;
 
 // ── INICIALIZAR PAGOS ──
 async function initPagos() {
@@ -13,16 +15,9 @@ async function initPagos() {
   await cargarSelectTratamientosPagos();
   await cargarSelectSuplementosPagos();
   await cargarUltimosCobros();
-
-  // Al cambiar tipo consulta, actualizar precio sugerido
-document.getElementById('pago-consulta-tipo')?.addEventListener('change', function() {
-  const precioEl = document.getElementById('pago-consulta-precio');
-  if (precioEl) { precioEl.value = this.value; precioEl.dataset.editado = ''; }
-});
-
 }
 
-// ── CARGAR SELECTS ──
+// ── CARGAR SELECTS (ocultos, usados como fuente de opciones) ──
 async function cargarSelectPacientesPagos() {
   const { data } = await db.from('pacientes').select('id,nombre,apellidos').eq('activo',true).order('nombre');
   const sel = document.getElementById('pago-paciente');
@@ -42,16 +37,8 @@ async function cargarSelectTratamientosPagos() {
   const sel = document.getElementById('pago-tratamiento');
   if (sel && data) {
     sel.innerHTML = '<option value="0">Seleccionar...</option>' +
-      data.map(t => `<option value="${t.precio}" data-id="${t.id}" data-nombre="${t.nombre}">
-        ${t.nombre} ($${parseFloat(t.precio).toLocaleString()})</option>`).join('');
+      data.map(t => `<option value="${t.precio}" data-id="${t.id}" data-nombre="${t.nombre}">${t.nombre} ($${parseFloat(t.precio).toLocaleString()})</option>`).join('');
   }
-
-  document.getElementById('pago-tratamiento')?.addEventListener('change', function() {
-    const precio = this.options[this.selectedIndex]?.value || 0;
-    const precioEl = document.getElementById('pago-trat-precio');
-    if (precioEl) precioEl.value = precio > 0 ? precio : '';
-  });
-
 }
 
 async function cargarSelectSuplementosPagos() {
@@ -60,61 +47,33 @@ async function cargarSelectSuplementosPagos() {
   if (sel && data) {
     sel.innerHTML = '<option value="0">Seleccionar...</option>' +
       data.filter(p => p.precio_venta > 0).map(p =>
-        `<option value="${p.precio_venta}" data-id="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">
-          ${p.nombre} ($${parseFloat(p.precio_venta).toLocaleString()}/${p.unidad})</option>`
+        `<option value="${p.precio_venta}" data-id="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} ($${parseFloat(p.precio_venta).toLocaleString()}/${p.unidad})</option>`
       ).join('');
   }
-
-  document.getElementById('pago-suplemento')?.addEventListener('change', function() {
-    const precio = this.options[this.selectedIndex]?.value || 0;
-    const precioEl = document.getElementById('pago-supl-precio');
-    if (precioEl) precioEl.value = precio > 0 ? precio : '';
-  });
-
 }
 
 // ── RECALCULAR TOTALES ──
 function recalcPago() {
+  let totalTrats = 0;
+  document.querySelectorAll('.trat-item').forEach(item => {
+    totalTrats += parseFloat(item.querySelector('.trat-precio')?.value || 0);
+  });
 
-// Sincronizar precio consulta con select SOLO si no ha sido editado manualmente
-const selConsulta = document.getElementById('pago-consulta-tipo');
-const precioConsulta = document.getElementById('pago-consulta-precio');
-if (selConsulta && precioConsulta && precioConsulta.value === '') {
-  precioConsulta.value = selConsulta.value;
-}
+  let totalSupls = 0;
+  document.querySelectorAll('.supl-item').forEach(item => {
+    const precio = parseFloat(item.querySelector('.supl-precio')?.value || 0);
+    const qty    = parseFloat(item.querySelector('.supl-qty')?.value || 1);
+    totalSupls += precio * qty;
+  });
 
-
-  // Consulta
-  const chkConsulta = document.getElementById('chk-consulta');
-  const bloqConsulta = document.getElementById('consulta-block');
-  if (bloqConsulta) bloqConsulta.style.display = chkConsulta?.checked ? 'block' : 'none';
-  const montoConsulta = chkConsulta?.checked
-    ? parseFloat(document.getElementById('pago-consulta-precio')?.value || document.getElementById('pago-consulta-tipo')?.value || 0) : 0;
-
-  // Tratamiento
-  const chkTrat = document.getElementById('chk-trat');
-  const bloqTrat = document.getElementById('trat-block');
-  if (bloqTrat) bloqTrat.style.display = chkTrat?.checked ? 'block' : 'none';
-  const montoTrat = chkTrat?.checked
-    ? parseFloat(document.getElementById('pago-trat-precio')?.value || document.getElementById('pago-tratamiento')?.value || 0) : 0;
-
-  // Suplementos
-  const chkSupl = document.getElementById('chk-supl');
-  const bloqSupl = document.getElementById('supl-block');
-  if (bloqSupl) bloqSupl.style.display = chkSupl?.checked ? 'block' : 'none';
-  const precioSuplEdit = document.getElementById('pago-supl-precio')?.value;
-  const precioSupl = chkSupl?.checked
-    ? parseFloat(precioSuplEdit && parseFloat(precioSuplEdit) > 0 ? precioSuplEdit : document.getElementById('pago-suplemento')?.value || 0) : 0;
-  const qty = chkSupl?.checked
-    ? parseFloat(document.getElementById('pago-supl-qty')?.value || 1) : 0;
-  const montoSupl = precioSupl * qty;
-
-  const total = montoConsulta + montoTrat + montoSupl;
-
-  document.getElementById('tot-consulta').textContent = '$' + montoConsulta.toLocaleString();
-  document.getElementById('tot-trat').textContent     = '$' + montoTrat.toLocaleString();
-  document.getElementById('tot-supl').textContent     = '$' + montoSupl.toFixed(2);
-  document.getElementById('tot-total').textContent    = '$' + total.toLocaleString();
+  const total = totalTrats + totalSupls;
+  const stEl = document.getElementById('subtotal-trats');
+  const ssEl = document.getElementById('subtotal-supls');
+  if (stEl) stEl.textContent = '$' + totalTrats.toLocaleString();
+  if (ssEl) ssEl.textContent = '$' + totalSupls.toLocaleString();
+  document.getElementById('tot-trat').textContent  = '$' + totalTrats.toLocaleString();
+  document.getElementById('tot-supl').textContent  = '$' + totalSupls.toLocaleString();
+  document.getElementById('tot-total').textContent = '$' + total.toLocaleString();
 }
 
 // ── MÉTODO DE PAGO ──
@@ -122,6 +81,80 @@ function selPM(el) {
   document.querySelectorAll('.pm').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
   metodoSeleccionado = el.dataset.metodo || 'efectivo';
+}
+
+// ── AGREGAR TRATAMIENTO ──
+function agregarTratPago() {
+  const cont = document.getElementById('trats-container');
+  const id   = ++tratCounter;
+  const opciones = document.getElementById('pago-tratamiento')?.innerHTML || '';
+
+  const div = document.createElement('div');
+  div.className = 'trat-item';
+  div.id = `trat-item-${id}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 130px 32px;gap:8px;margin-bottom:8px;align-items:center';
+  div.innerHTML = `
+    <select class="trat-select" onchange="autoFillTratPrecio(this,${id})"
+      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      <option value="0">Seleccionar tratamiento...</option>
+      ${opciones.replace(/<option[^>]*>[^<]*Seleccionar[^<]*<\/option>/g,'')}
+    </select>
+    <input type="number" class="trat-precio" placeholder="Precio $" step="0.01" oninput="recalcPago()"
+      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="eliminarTratPago(${id})"
+      style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:14px">✕</button>`;
+  cont.appendChild(div);
+  recalcPago();
+}
+
+function autoFillTratPrecio(sel, id) {
+  const precio   = sel.options[sel.selectedIndex]?.value || 0;
+  const precioEl = document.getElementById(`trat-item-${id}`)?.querySelector('.trat-precio');
+  if (precioEl && parseFloat(precio) > 0) precioEl.value = precio;
+  recalcPago();
+}
+
+function eliminarTratPago(id) {
+  document.getElementById(`trat-item-${id}`)?.remove();
+  recalcPago();
+}
+
+// ── AGREGAR SUPLEMENTO / MEDICAMENTO / PROTEÍNA ──
+function agregarSuplPago() {
+  const cont = document.getElementById('supls-container');
+  const id   = ++suplCounter;
+  const opciones = document.getElementById('pago-suplemento')?.innerHTML || '';
+
+  const div = document.createElement('div');
+  div.className = 'supl-item';
+  div.id = `supl-item-${id}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 110px 32px;gap:8px;margin-bottom:8px;align-items:center';
+  div.innerHTML = `
+    <select class="supl-select" onchange="autoFillSuplPrecio(this,${id})"
+      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      <option value="0">Seleccionar producto...</option>
+      ${opciones.replace(/<option[^>]*>[^<]*Seleccionar[^<]*<\/option>/g,'')}
+    </select>
+    <input type="number" class="supl-qty" value="1" step="0.25" min="0.25" oninput="recalcPago()" placeholder="Cant."
+      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+    <input type="number" class="supl-precio" placeholder="Precio $" step="0.01" oninput="recalcPago()"
+      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="eliminarSuplPago(${id})"
+      style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:14px">✕</button>`;
+  cont.appendChild(div);
+  recalcPago();
+}
+
+function autoFillSuplPrecio(sel, id) {
+  const precio   = sel.options[sel.selectedIndex]?.value || 0;
+  const precioEl = document.getElementById(`supl-item-${id}`)?.querySelector('.supl-precio');
+  if (precioEl && parseFloat(precio) > 0) precioEl.value = precio;
+  recalcPago();
+}
+
+function eliminarSuplPago(id) {
+  document.getElementById(`supl-item-${id}`)?.remove();
+  recalcPago();
 }
 
 // ── REGISTRAR COBRO ──
@@ -132,90 +165,85 @@ async function registrarCobro() {
   if (!pacienteId) { showToast('⚠ Selecciona una paciente'); return; }
   if (!fecha)      { showToast('⚠ La fecha es obligatoria'); return; }
 
-  const chkConsulta = document.getElementById('chk-consulta').checked;
-  const chkTrat     = document.getElementById('chk-trat').checked;
-  const chkSupl     = document.getElementById('chk-supl').checked;
-
-  if (!chkConsulta && !chkTrat && !chkSupl) {
-
-    // Si el cobro es en crédito, actualizar módulo de créditos si está visible
-    if (metodoSeleccionado === 'credito' && typeof initCreditos === 'function') {
-      const modCreditos = document.getElementById('mod-creditos');
-      if (modCreditos?.classList.contains('active')) initCreditos();
+  // Recopilar tratamientos
+  const tratItems = [];
+  document.querySelectorAll('.trat-item').forEach(item => {
+    const sel    = item.querySelector('.trat-select');
+    const precio = parseFloat(item.querySelector('.trat-precio')?.value || 0);
+    const nombre = sel?.options[sel.selectedIndex]?.dataset?.nombre ||
+                   sel?.options[sel.selectedIndex]?.text?.replace(/\s*\(.*\)/, '').trim() || '';
+    const id     = sel?.options[sel.selectedIndex]?.dataset?.id || null;
+    if (precio > 0 && nombre && !nombre.includes('Seleccionar')) {
+      tratItems.push({ nombre, precio, id });
     }
+  });
 
-    showToast('⚠ Agrega al menos un concepto al cobro');
+  // Recopilar suplementos
+  const suplItems = [];
+  document.querySelectorAll('.supl-item').forEach(item => {
+    const sel    = item.querySelector('.supl-select');
+    const qty    = parseFloat(item.querySelector('.supl-qty')?.value || 1);
+    const precio = parseFloat(item.querySelector('.supl-precio')?.value || 0);
+    const nombre = sel?.options[sel.selectedIndex]?.dataset?.nombre ||
+                   sel?.options[sel.selectedIndex]?.text?.replace(/\s*\(.*\)/, '').trim() || '';
+    const id     = sel?.options[sel.selectedIndex]?.dataset?.id || null;
+    if (precio > 0 && nombre && !nombre.includes('Seleccionar')) {
+      suplItems.push({ nombre, qty, precio, id, monto: precio * qty });
+    }
+  });
+
+  if (tratItems.length === 0 && suplItems.length === 0) {
+    showToast('⚠ Agrega al menos un tratamiento o suplemento');
     return;
   }
 
-  const montoConsulta = chkConsulta
-    ? parseFloat(document.getElementById('pago-consulta-precio')?.value || document.getElementById('pago-consulta-tipo').value || 0) : 0;
-
-  const tratSel = document.getElementById('pago-tratamiento');
-  const montoTrat = chkTrat ? parseFloat(document.getElementById('pago-trat-precio')?.value || tratSel.value || 0) : 0;
-  const tratId    = chkTrat ? tratSel.options[tratSel.selectedIndex]?.dataset?.id || null : null;
-  const tratNombre = chkTrat ? tratSel.options[tratSel.selectedIndex]?.dataset?.nombre || '' : '';
-
-  const suplSel = document.getElementById('pago-suplemento');
-  const precioSuplEditado = document.getElementById('pago-supl-precio')?.value;
-  const precioSupl = chkSupl ? parseFloat(precioSuplEditado > 0 ? precioSuplEditado : suplSel.value || 0) : 0;
-  const qty = chkSupl ? parseFloat(document.getElementById('pago-supl-qty').value || 1) : 0;
-  const montoSupl = precioSupl * qty;
-  const suplId    = chkSupl ? suplSel.options[suplSel.selectedIndex]?.dataset?.id || null : null;
-
-  const total = montoConsulta + montoTrat + montoSupl;
-
-  // Construir concepto
-  const conceptos = [];
-  if (chkConsulta) conceptos.push('Consulta');
-  if (chkTrat && tratNombre) conceptos.push(tratNombre);
-  if (chkSupl) conceptos.push('Suplemento');
-  const concepto = conceptos.join(' + ');
-
-  const folio = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
+  const totalTrats = tratItems.reduce((s, t) => s + t.precio, 0);
+  const totalSupls = suplItems.reduce((s, s2) => s + s2.monto, 0);
+  const total      = totalTrats + totalSupls;
+  const concepto   = [...tratItems.map(t => t.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
+  const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
 
   const datos = {
-    paciente_id:         pacienteId,
-    concepto:            concepto,
-    monto_consulta:      montoConsulta,
-    monto_tratamiento:   montoTrat,
-    monto_suplementos:   montoSupl,
-    total:               total,
-    metodo_pago:         metodoSeleccionado,
-    fecha:               fecha,
-    folio:               folio,
+    paciente_id:       pacienteId,
+    concepto:          concepto,
+    monto_consulta:    0,
+    monto_tratamiento: totalTrats,
+    monto_suplementos: totalSupls,
+    total:             total,
+    metodo_pago:       metodoSeleccionado,
+    fecha:             fecha,
+    folio:             folio,
   };
 
   const { error } = await db.from('pagos').insert([datos]);
   if (error) { showToast('❌ Error: ' + error.message); return; }
 
-  // Descontar stock si hay suplemento
-  if (chkSupl && suplId && qty > 0) {
-    const { data: prod } = await db.from('inventario').select('stock').eq('id', suplId).single();
-    if (prod) {
-      const nuevoStock = Math.max(0, parseFloat(prod.stock) - qty);
-      await db.from('inventario').update({ stock: nuevoStock }).eq('id', suplId);
+  // Descontar stock de cada suplemento
+  for (const s of suplItems) {
+    if (s.id && s.qty > 0) {
+      const { data: prod } = await db.from('inventario').select('stock').eq('id', s.id).single();
+      if (prod) {
+        const nuevoStock = Math.max(0, parseFloat(prod.stock) - s.qty);
+        await db.from('inventario').update({ stock: nuevoStock }).eq('id', s.id);
+      }
     }
   }
 
+  // Si es crédito, actualizar módulo créditos
+  if (metodoSeleccionado === 'credito' && typeof initCreditos === 'function') {
+    const modCreditos = document.getElementById('mod-creditos');
+    if (modCreditos?.classList.contains('active')) initCreditos();
+  }
+
   showToast(`✓ Cobro de $${total.toLocaleString()} registrado correctamente`);
-  
-  // Generar nota de venta
-  const selPac = document.getElementById('pago-paciente');
+
+  // Nota de venta
+  const selPac    = document.getElementById('pago-paciente');
   const nombrePac = selPac.options[selPac.selectedIndex]?.text || '—';
-  
-
-  const detalles = [];
-  if (chkConsulta) detalles.push({ concepto: 'Consulta', monto: montoConsulta });
-  if (chkTrat && montoTrat > 0) {
-    const tratNombreCompleto = document.getElementById('pago-tratamiento').options[document.getElementById('pago-tratamiento').selectedIndex]?.dataset?.nombre || 'Tratamiento';
-    detalles.push({ concepto: tratNombreCompleto, monto: montoTrat });
-  }
-  if (chkSupl && montoSupl > 0) {
-    const suplNombre = document.getElementById('pago-suplemento').options[document.getElementById('pago-suplemento').selectedIndex]?.dataset?.nombre || 'Suplemento';
-    detalles.push({ concepto: `${suplNombre} x${qty}`, monto: montoSupl });
-  }
-
+  const detalles  = [
+    ...tratItems.map(t => ({ concepto: t.nombre, monto: t.precio })),
+    ...suplItems.map(s => ({ concepto: `${s.nombre} x${s.qty}`, monto: s.monto }))
+  ];
   const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito' };
 
   document.getElementById('nota-imprimible').innerHTML = `
@@ -227,20 +255,10 @@ async function registrarCobro() {
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
-      ${detalles.map(d => `
-        <div class="nota-row">
-          <span>${d.concepto}</span>
-          <span>$${parseFloat(d.monto).toLocaleString()}</span>
-        </div>`).join('')}
+      ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
-      <div class="nota-row total-row">
-        <span>TOTAL</span>
-        <span><strong>$${total.toLocaleString()}</strong></span>
-      </div>
-      <div class="nota-row" style="font-size:12px">
-        <span>Método de pago</span>
-        <span>${metodoLabel[metodoSeleccionado] || metodoSeleccionado}</span>
-      </div>
+      <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${total.toLocaleString()}</strong></span></div>
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[metodoSeleccionado] || metodoSeleccionado}</span></div>
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
@@ -249,15 +267,12 @@ async function registrarCobro() {
     </div>`;
 
   openModal('nota-impr');
-
   limpiarFormPago();
   await cargarUltimosCobros();
 }
 
-
 // ── CARGAR ÚLTIMOS COBROS ──
 async function cargarUltimosCobros() {
-  const hoy = new Date().toISOString().split('T')[0];
   const filtro = document.getElementById('filtro-cobros-fecha');
   if (filtro && !filtro.value) filtro.value = '';
 
@@ -275,8 +290,7 @@ async function cargarUltimosCobros() {
 function filtrarUltimosCobros() {
   const fecha = document.getElementById('filtro-cobros-fecha')?.value || '';
   const data  = window._cobrosData || [];
-  const filtrados = fecha ? data.filter(p => p.fecha === fecha) : data;
-  renderCobros(filtrados);
+  renderCobros(fecha ? data.filter(p => p.fecha === fecha) : data);
 }
 
 function renderCobros(data) {
@@ -284,12 +298,11 @@ function renderCobros(data) {
   if (!tbody) return;
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;opacity:.3;padding:16px">Sin cobros registrados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;opacity:.3;padding:16px">Sin cobros registrados</td></tr>`;
     return;
   }
 
   const metBadge = { efectivo:'badge-green', tarjeta:'badge-blue', credito:'badge-gold', transferencia:'badge-gray' };
-
   tbody.innerHTML = data.slice(0,15).map(p => {
     const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
     const badge  = metBadge[p.metodo_pago] || 'badge-gray';
@@ -308,22 +321,25 @@ function renderCobros(data) {
 // ── LIMPIAR FORM ──
 function limpiarFormPago() {
   document.getElementById('pago-paciente').value = '';
-  document.getElementById('pago-notas').value    = '';
-  document.getElementById('pago-supl-qty').value = '1';
+  const notasEl = document.getElementById('pago-notas');
+  if (notasEl) notasEl.value = '';
 
-  ['chk-consulta','chk-trat','chk-supl'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.checked = false;
-  });
-  ['consulta-block','trat-block','supl-block'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+  const tratsEl = document.getElementById('trats-container');
+  const suplsEl = document.getElementById('supls-container');
+  if (tratsEl) tratsEl.innerHTML = '';
+  if (suplsEl) suplsEl.innerHTML = '';
 
-  document.getElementById('tot-consulta').textContent = '$0';
-  document.getElementById('tot-trat').textContent     = '$0';
-  document.getElementById('tot-supl').textContent     = '$0';
-  document.getElementById('tot-total').textContent    = '$0';
+  const stEl = document.getElementById('subtotal-trats');
+  const ssEl = document.getElementById('subtotal-supls');
+  if (stEl) stEl.textContent = '$0';
+  if (ssEl) ssEl.textContent = '$0';
+
+  tratCounter = 0;
+  suplCounter = 0;
+
+  document.getElementById('tot-trat').textContent  = '$0';
+  document.getElementById('tot-supl').textContent  = '$0';
+  document.getElementById('tot-total').textContent = '$0';
 
   document.querySelectorAll('.pm').forEach(p => p.classList.remove('selected'));
   document.querySelector('.pm')?.classList.add('selected');
@@ -357,20 +373,10 @@ async function reimprimirCobro(id) {
       <div class="nota-folio">Folio: <strong>${p.folio || '—'}</strong> &nbsp;|&nbsp; ${p.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
-      ${detalles.map(d => `
-        <div class="nota-row">
-          <span>${d.concepto}</span>
-          <span>$${parseFloat(d.monto).toLocaleString()}</span>
-        </div>`).join('')}
+      ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
-      <div class="nota-row total-row">
-        <span>TOTAL</span>
-        <span><strong>$${parseFloat(p.total).toLocaleString()}</strong></span>
-      </div>
-      <div class="nota-row" style="font-size:12px">
-        <span>Método de pago</span>
-        <span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span>
-      </div>
+      <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${parseFloat(p.total).toLocaleString()}</strong></span></div>
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>

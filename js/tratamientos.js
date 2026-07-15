@@ -101,8 +101,6 @@ async function editarTratamiento(id) {
   document.getElementById('trat-precio').value       = t.precio;
   document.getElementById('trat-descripcion').value  = t.descripcion || '';
   document.getElementById('trat-maneja-paquete').checked = t.maneja_paquete || false;
-  document.getElementById('trat-paq8').checked       = t.sesiones_paquete_8 || false;
-  document.getElementById('trat-paq10').checked      = t.sesiones_paquete_10 || false;
   togglePaqueteOpts();
   document.querySelector('#modal-nuevo-trat .modal-title').textContent = 'Editar Tratamiento';
   openModal('nuevo-trat');

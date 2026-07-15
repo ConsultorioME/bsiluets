@@ -229,16 +229,27 @@ async function cargarSelectsModal() {
   if (selTrat && trats)
     selTrat.innerHTML = '<option value="0" data-id="" data-precio="0">Seleccionar...</option>' +
       trats.map(t => `<option value="${t.id}" data-id="${t.id}" data-precio="${t.precio}">${t.nombre} ($${parseFloat(t.precio).toLocaleString()})</option>`).join('');
-}
+    
+    
+      // Al seleccionar tratamiento, sugerir precio
+    selTrat?.addEventListener('change', function() {
+      const opt = this.options[this.selectedIndex];
+      const precio = opt?.dataset?.precio || 0;
+      document.getElementById('npaq-precio').value = precio;
+      calcTotalPaq();
+    });
+
+    // Al cambiar sesiones, recalcular total
+    document.getElementById('npaq-sesiones')?.addEventListener('change', calcTotalPaq);
+
+
+    }
 
 function calcTotalPaq() {
-  const tratSel = document.getElementById('npaq-tratamiento');
-  const precio  = parseFloat(tratSel.options[tratSel.selectedIndex]?.dataset?.precio || 0);
-  const sesiones = parseInt(document.getElementById('npaq-sesiones').value) || 10;
-  const total   = precio * sesiones;
-  document.getElementById('npaq-precio').value = precio;
-  document.getElementById('npaq-total').value  = total;
-  calcSaldoPaq();
+  const sesiones = parseInt(document.getElementById('npaq-sesiones').value) || 0;
+  const precio   = parseFloat(document.getElementById('npaq-precio').value) || 0;
+  const total    = sesiones * precio;
+  document.getElementById('npaq-total').value = total;
 }
 
 function calcSaldoPaq() {

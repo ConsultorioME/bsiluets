@@ -327,8 +327,8 @@
             <select id="filtro-inv-cat" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none" onchange="buscarInventario(document.querySelector('#mod-inventario .search-box').value)">
               <option value="">Todas las categorías</option>
               <option value="Suplemento">Suplementos</option>
-              <option value="Insumo médico">Insumos médicos</option>
-              <option value="Cosmético">Cosméticos</option>
+              <option value="Medicamento">Insumos médicos</option>
+              <option value="Proteína">Cosméticos</option>
             </select>
             <button class="tb-btn" onclick="openModal('nuevo-prod')">+ Producto</button>
           </div>
@@ -344,128 +344,200 @@
           </div>
         </div>
 
-      <!-- PAGOS -->
-<div class="module" id="mod-pagos">
-  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
-    <div>
-      <div class="pago-form">
-        <div class="card-title" style="margin-bottom:20px">Nueva Atención / Cobro</div>
-
-        <div class="accion-servicio">
-          <div class="as-header"><span class="as-title">Paciente</span></div>
-          <div class="pago-grid">
-            <div class="fg"><label>Paciente</label>
-              <select id="pago-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                <option value="">Seleccionar...</option>
-              </select>
-            </div>
-            <div class="fg"><label>Fecha</label>
-              <input type="date" id="pago-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-            </div>
-          </div>
-        </div>
-
-        <div class="accion-servicio">
-          <div class="as-header">
-            <span class="as-title">Consulta</span>
-            <input type="checkbox" id="chk-consulta" onchange="recalcPago()" style="accent-color:var(--gold)">
-          </div>
-          <div id="consulta-block" style="display:none">
-            <div class="fg">
-              <label>Tipo de consulta</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <select id="pago-consulta-tipo" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                  <option value="350">Consulta general ($350)</option>
-                  <option value="200">Consulta de seguimiento ($200)</option>
-                </select>
-                <input type="number" id="pago-consulta-precio" step="0.01" placeholder="0.00" oninput="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accion-servicio">
-          <div class="as-header">
-            <span class="as-title">Tratamiento</span>
-            <input type="checkbox" id="chk-trat" onchange="recalcPago()" style="accent-color:var(--gold)">
-          </div>
-          <div id="trat-block" style="display:none">
-            <div class="pago-grid">
-              <div class="fg"><label>Tratamiento</label>
-                <select id="pago-tratamiento" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                  <option value="0">Seleccionar...</option>
-                </select>
-              </div>
-              <div class="fg"><label>Precio tratamiento ($)</label>
-                <input type="number" id="pago-trat-precio" step="0.01" placeholder="0.00" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="accion-servicio">
-          <div class="as-header">
-            <span class="as-title">Suplementos</span>
-            <input type="checkbox" id="chk-supl" onchange="recalcPago()" style="accent-color:var(--gold)">
-          </div>
-          <div id="supl-block" style="display:none">
-            <div class="pago-grid">
-              <div class="fg"><label>Producto</label>
-                <select id="pago-suplemento" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                  <option value="0">Seleccionar...</option>
-                </select>
-              </div>
-              <div class="fg"><label>Cantidad</label>
-                <input type="number" id="pago-supl-qty" step="0.25" min="0.25" value="1" onchange="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    <!-- PAGOS -->
+      <div class="module" id="mod-pagos">
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
+          <div>
+            <div class="pago-form">
+              <div class="card-title" style="margin-bottom:20px">Nueva Atención / Cobro</div>
+              <div class="accion-servicio">
+                <div class="as-header"><span class="as-title">Paciente</span></div>
+                <div class="pago-grid">
+                  <div class="fg"><label>Paciente</label>
+                    <select id="pago-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                      <option value="">Seleccionar...</option>
+                    </select>
+                  </div>
+                  <div class="fg"><label>Fecha</label>
+                    <input type="date" id="pago-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                  </div>
                 </div>
-                <div class="fg"><label>Precio unitario ($)</label>
-                <input type="number" id="pago-supl-precio" step="0.01" placeholder="0.00" oninput="recalcPago()" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
               </div>
+              <div class="accion-servicio">
+                <div class="as-header">
+                  <span class="as-title">Tratamientos</span>
+                  <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarTratPago()">+ Agregar</button>
+                </div>
+                <div id="trat-block">
+                  <div id="trats-container"></div>
+                  <div style="text-align:right;margin-top:6px;font-size:13px;color:var(--gold)">
+                    Subtotal tratamientos: <strong id="subtotal-trats">$0</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="accion-servicio">
+                <div class="as-header">
+                  <span class="as-title">Suplementos / Medicamentos / Proteínas</span>
+                  <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarSuplPago()">+ Agregar</button>
+                </div>
+                <div id="supl-block">
+                  <div id="supls-container"></div>
+                  <div style="text-align:right;margin-top:6px;font-size:13px;color:var(--gold)">
+                    Subtotal: <strong id="subtotal-supls">$0</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="pago-total">
+                <div class="pago-total-row"><span>Tratamientos</span><span id="tot-trat">$0</span></div>
+                <div class="pago-total-row"><span>Suplementos / Med. / Prot.</span><span id="tot-supl">$0</span></div>
+                <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
+              </div>
+              <div style="margin-top:16px">
+                <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
+                <div class="payment-methods">
+                  <div class="pm selected" onclick="selPM(this)" data-metodo="efectivo">💵 Efectivo</div>
+                  <div class="pm" onclick="selPM(this)" data-metodo="tarjeta">💳 Tarjeta</div>
+                  <div class="pm" onclick="selPM(this)" data-metodo="credito">📲 Crédito</div>
+                </div>
+              </div>
+              <div class="fg" style="margin-top:14px">
+                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4">Notas del cobro (opcional)</label>
+                <input type="text" id="pago-notas" placeholder="Ej. Pago parcial, próxima sesión..." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;margin-top:6px">
+              </div>
+              <button class="btn-primary" style="margin-top:20px;width:100%" onclick="registrarCobro()">Registrar Cobro</button>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+                <span>Últimos Cobros</span>
+                <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
+              </div>
+              <table>
+                <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th>Total</th><th></th></tr>
+                <tbody id="tabla-ultimos-cobros">
+                  <tr><td colspan="6" style="text-align:center;opacity:.3;padding:16px">Cargando...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="pago-total">
-          <div class="pago-total-row"><span>Consulta</span><span id="tot-consulta">$0</span></div>
-          <div class="pago-total-row"><span>Tratamiento</span><span id="tot-trat">$0</span></div>
-          <div class="pago-total-row"><span>Suplementos</span><span id="tot-supl">$0</span></div>
-          <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
-        </div>
 
-        <div style="margin-top:16px">
-          <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
-          <div class="payment-methods">
-            <div class="pm selected" onclick="selPM(this)" data-metodo="efectivo">💵 Efectivo</div>
-            <div class="pm" onclick="selPM(this)" data-metodo="tarjeta">💳 Tarjeta</div>
-            <div class="pm" onclick="selPM(this)" data-metodo="credito">📲 Crédito</div>
+      <!-- PAQUETES & VISITAS -->
+        <div class="module" id="mod-paquetes" style="padding:0">
+          <div class="mod-tabs">
+            <button class="mod-tab active" onclick="showModTab('paq-lista',this)">Paquetes registrados</button>
+            <button class="mod-tab" onclick="showModTab('paq-visita',this)">Registrar visita / cobro</button>
+            <button class="mod-tab" onclick="showModTab('paq-notas',this)">Notas del día</button>
           </div>
+          <div class="mod-panel active" id="paq-lista" style="padding:20px 28px">
+            <div class="kpi-grid" style="margin-bottom:20px">
+              <div class="kpi"><div class="kpi-label">Paquetes activos</div><div class="kpi-val" id="kpi-paq-activos">—</div></div>
+              <div class="kpi"><div class="kpi-label">Con saldo pendiente</div><div class="kpi-val" id="kpi-paq-saldo">—</div></div>
+              <div class="kpi"><div class="kpi-label">Vencen esta semana</div><div class="kpi-val" id="kpi-paq-vencen" style="color:#e74c3c">—</div></div>
+              <div class="kpi"><div class="kpi-label">Total en cartera</div><div class="kpi-val" id="kpi-paq-cartera">—</div></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-bottom:18px">
+              <input type="text" class="search-box" placeholder="🔍  Buscar paciente o paquete..." oninput="buscarPaquete(this.value)">
+              <button class="tb-btn" onclick="openModal('nuevo-paquete')">+ Nuevo Paquete</button>
+            </div>
+            <div class="card">
+              <div class="card-title">Paquetes</div>
+              <table>
+                <tr><th>Paciente</th><th>Tratamiento</th><th>Sesiones</th><th>Progreso</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr>
+                <tbody id="tabla-paquetes-body"></tbody>
+              </table>
+            </div>
+            <div class="card" id="detalle-paquete" style="display:none;margin-top:18px">
+              <div class="card-title">
+                <span id="det-titulo">Detalle</span>
+                <button class="tb-btn" style="font-size:10px;padding:4px 10px" onclick="document.getElementById('detalle-paquete').style.display='none'">× Cerrar</button>
+              </div>
+              <div id="det-content"></div>
+            </div>
+          </div>
+          <div class="mod-panel" id="paq-visita" style="padding:20px 28px">
+            <div class="info-box-mod">Al registrar la visita se genera una <strong>Nota de Venta</strong>. Si el paciente no paga, la nota se emite en <strong>$0.00</strong> como comprobante oficial de asistencia.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <div class="card">
+                <div class="card-title">Datos de la visita</div>
+                <div class="fg" style="margin-bottom:12px">
+                  <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
+                  <select id="vis-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="cargarPaqueteVis()">
+                    <option value="">Seleccionar...</option>
+                  </select>
+                </div>
+                <div id="info-paq-vis" style="display:none;margin-bottom:12px">
+                  <div style="background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.12);padding:13px">
+                    <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:8px">Info del paquete</div>
+                    <div id="paq-info-rows" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px"></div>
+                  </div>
+                </div>
+                <div class="fg" style="margin-bottom:12px">
+                  <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
+                  <input type="date" id="vis-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                </div>
+                <div class="fg" style="margin-bottom:12px">
+                  <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">¿Realiza pago hoy?</label>
+                  <select id="vis-pago-tipo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="togglePagoVis()">
+                    <option value="no">No — solo registrar visita (nota en $0)</option>
+                    <option value="abono">Sí — abono al saldo del paquete</option>
+                    <option value="total">Sí — paga el total restante</option>
+                  </select>
+                </div>
+                <div id="bloque-pago-vis" style="display:none;margin-bottom:12px">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div>
+                      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Monto</label>
+                      <input type="number" id="vis-monto" placeholder="0.00" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" oninput="actualizarNotaVis()">
+                    </div>
+                    <div>
+                      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
+                      <select id="vis-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+                        <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn-primary" style="width:100%;padding:12px;margin-top:6px" onclick="generarNotaVis()">Registrar Visita & Generar Nota</button>
+              </div>
+              <div class="card">
+                <div class="card-title">Vista previa — Nota de Venta</div>
+                <div id="nota-preview-wrap"><div style="text-align:center;padding:40px;color:var(--cream);opacity:.2;font-size:13px">Selecciona un paciente para previsualizar</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mod-panel" id="paq-notas" style="padding:20px 28px">
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg" style="margin-bottom:0">
+          <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
+          <input type="date" id="filtro-notas-fecha" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="filtrarNotas()">
         </div>
-
-        <div class="fg" style="margin-top:14px">
-          <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4">Notas del cobro (opcional)</label>
-          <input type="text" id="pago-notas" placeholder="Ej. Pago parcial, próxima sesión..." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;margin-top:6px">
+        <div class="fg" style="margin-bottom:0">
+          <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
+          <select id="filtro-notas-paciente" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;min-width:200px" onchange="filtrarNotas()">
+            <option value="">Todos</option>
+          </select>
         </div>
-
-        <button class="btn-primary" style="margin-top:20px;width:100%" onclick="registrarCobro()">Registrar Cobro</button>
+        <button class="tb-btn" onclick="limpiarFiltrosNotas()">✕ Limpiar filtros</button>
+        <div style="margin-left:auto;background:rgba(201,168,108,.08);border:1px solid rgba(201,168,108,.15);padding:10px 20px;text-align:right">
+          <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream);opacity:.4;margin-bottom:4px">Subtotal filtrado</div>
+          <div id="subtotal-notas" style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold)">$0</div>
+        </div>
       </div>
-    </div>
-
-    <div>
       <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Últimos Cobros</span>
-        <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
-      </div>
-      <table>
-          <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th>Total</th><th></th></tr>
-          <tbody id="tabla-ultimos-cobros">
-            <tr><td colspan="4" style="text-align:center;opacity:.3;padding:16px">Cargando...</td></tr>
-          </tbody>
+        <div class="card-title">Notas — <span id="notas-fecha-hoy" style="color:var(--cream);opacity:.4;font-weight:300"></span></div>
+        <table>
+          <tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Sesión</th><th>Pago</th><th>Método</th><th>Saldo pendiente</th><th></th></tr>
+          <tbody id="tabla-notas-hoy"></tbody>
         </table>
       </div>
     </div>
-  </div>
-</div>
+      </div>
+
+
 
       <!-- REPORTES -->
       <div class="module" id="mod-reportes">
@@ -752,117 +824,7 @@
         </div>
       </div>
 
-      <!-- PAQUETES & VISITAS -->
-      <div class="module" id="mod-paquetes">
-        <div class="mod-tabs">
-          <button class="mod-tab active" onclick="showModTab('paq-lista',this)">Paquetes registrados</button>
-          <button class="mod-tab" onclick="showModTab('paq-visita',this)">Registrar visita / cobro</button>
-          <button class="mod-tab" onclick="showModTab('paq-notas',this)">Notas del día</button>
-        </div>
-        <div class="mod-panel active" id="paq-lista">
-          <div class="kpi-grid" style="margin-bottom:20px">
-            <div class="kpi"><div class="kpi-label">Paquetes activos</div><div class="kpi-val" id="kpi-paq-activos">—</div></div>
-            <div class="kpi"><div class="kpi-label">Con saldo pendiente</div><div class="kpi-val" id="kpi-paq-saldo">—</div></div>
-            <div class="kpi"><div class="kpi-label">Vencen esta semana</div><div class="kpi-val" id="kpi-paq-vencen" style="color:#e74c3c">—</div></div>
-            <div class="kpi"><div class="kpi-label">Total en cartera</div><div class="kpi-val" id="kpi-paq-cartera">—</div></div>
-          </div>
-          <div style="display:flex;gap:12px;margin-bottom:18px">
-            <input type="text" class="search-box" placeholder="🔍  Buscar paciente o paquete..." oninput="buscarPaquete(this.value)">
-            <button class="tb-btn" onclick="openModal('nuevo-paquete')">+ Nuevo Paquete</button>
-          </div>
-          <div class="card">
-            <div class="card-title">Paquetes</div>
-            <table>
-              <tr><th>Paciente</th><th>Tratamiento</th><th>Sesiones</th><th>Progreso</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th></th></tr>
-              <tbody id="tabla-paquetes-body"></tbody>
-            </table>
-          </div>
-          <div class="card" id="detalle-paquete" style="display:none;margin-top:18px">
-            <div class="card-title">
-              <span id="det-titulo">Detalle</span>
-              <button class="tb-btn" style="font-size:10px;padding:4px 10px" onclick="document.getElementById('detalle-paquete').style.display='none'">× Cerrar</button>
-            </div>
-            <div id="det-content"></div>
-          </div>
-        </div>
-        <div class="mod-panel" id="paq-visita">
-          <div class="info-box-mod">Al registrar la visita se genera una <strong>Nota de Venta</strong>. Si el paciente no paga, la nota se emite en <strong>$0.00</strong> como comprobante oficial de asistencia.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-            <div class="card">
-              <div class="card-title">Datos de la visita</div>
-              <div class="fg" style="margin-bottom:12px">
-                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
-                <select id="vis-paciente" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="cargarPaqueteVis()">
-                  <option value="">Seleccionar...</option>
-                </select>
-              </div>
-              <div id="info-paq-vis" style="display:none;margin-bottom:12px">
-                <div style="background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.12);padding:13px">
-                  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:8px">Info del paquete</div>
-                  <div id="paq-info-rows" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px"></div>
-                </div>
-              </div>
-              <div class="fg" style="margin-bottom:12px">
-                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
-                <input type="date" id="vis-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-              </div>
-              <div class="fg" style="margin-bottom:12px">
-                <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">¿Realiza pago hoy?</label>
-                <select id="vis-pago-tipo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="togglePagoVis()">
-                  <option value="no">No — solo registrar visita (nota en $0)</option>
-                  <option value="abono">Sí — abono al saldo del paquete</option>
-                  <option value="total">Sí — paga el total restante</option>
-                </select>
-              </div>
-              <div id="bloque-pago-vis" style="display:none;margin-bottom:12px">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                  <div>
-                    <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Monto</label>
-                    <input type="number" id="vis-monto" placeholder="0.00" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" oninput="actualizarNotaVis()">
-                  </div>
-                  <div>
-                    <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
-                    <select id="vis-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                      <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <button class="btn-primary" style="width:100%;padding:12px;margin-top:6px" onclick="generarNotaVis()">Registrar Visita & Generar Nota</button>
-            </div>
-            <div class="card">
-              <div class="card-title">Vista previa — Nota de Venta</div>
-              <div id="nota-preview-wrap"><div style="text-align:center;padding:40px;color:var(--cream);opacity:.2;font-size:13px">Selecciona un paciente para previsualizar</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="mod-panel" id="paq-notas">
-  <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap">
-    <div class="fg" style="margin-bottom:0">
-      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Fecha</label>
-      <input type="date" id="filtro-notas-fecha" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="filtrarNotas()">
-    </div>
-    <div class="fg" style="margin-bottom:0">
-      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Paciente</label>
-      <select id="filtro-notas-paciente" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;min-width:200px" onchange="filtrarNotas()">
-        <option value="">Todos</option>
-      </select>
-    </div>
-    <button class="tb-btn" onclick="limpiarFiltrosNotas()">✕ Limpiar filtros</button>
-    <div style="margin-left:auto;background:rgba(201,168,108,.08);border:1px solid rgba(201,168,108,.15);padding:10px 20px;text-align:right">
-      <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--cream);opacity:.4;margin-bottom:4px">Subtotal filtrado</div>
-      <div id="subtotal-notas" style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold)">$0</div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Notas — <span id="notas-fecha-hoy" style="color:var(--cream);opacity:.4;font-weight:300"></span></div>
-    <table>
-      <tr><th>Folio</th><th>Fecha</th><th>Paciente</th><th>Sesión</th><th>Pago</th><th>Método</th><th>Saldo pendiente</th><th></th></tr>
-      <tbody id="tabla-notas-hoy"></tbody>
-    </table>
-  </div>
-</div>
-      </div>
+
 
       <!-- CRÉDITOS & ADEUDOS -->
       <div class="module" id="mod-creditos">
@@ -987,15 +949,7 @@
         </label>
       </div>
     </div>
-    <div id="bloque-paquetes-opts" style="display:none;background:rgba(201,168,108,.05);border:1px solid rgba(201,168,108,.1);padding:14px;margin-bottom:14px">
-      <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:12px">Tipos de paquete disponibles</div>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.7;margin-bottom:10px">
-        <input type="checkbox" id="trat-paq8" style="accent-color:var(--gold)"> Paquete de 8 sesiones
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.7">
-        <input type="checkbox" id="trat-paq10" style="accent-color:var(--gold)"> Paquete de 10 sesiones
-      </label>
-    </div>
+    
     <div class="form-row full"><div class="fg"><label>Descripción</label><textarea id="trat-descripcion" placeholder="Descripción del tratamiento..."></textarea></div></div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('nuevo-trat');limpiarFormTratamiento()">Cancelar</button>
@@ -1014,8 +968,8 @@
       <div class="fg"><label>Categoría</label>
         <select id="prod-categoria">
           <option>Suplemento</option>
-          <option>Insumo médico</option>
-          <option>Cosmético</option>
+          <option>Medicamento</option>
+          <option>Proteína</option>
         </select>
       </div>
     </div>
@@ -1061,13 +1015,12 @@
     <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
       <div class="fg"><label>No. sesiones</label>
         <select id="npaq-sesiones" onchange="calcTotalPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
-          <option value="8">8 sesiones</option>
-          <option value="10" selected>10 sesiones</option>
-          <option value="12">12 sesiones</option>
+          <option value="4">4 sesiones</option>
+          <option value="12" selected>12 sesiones</option>
         </select>
       </div>
       <div class="fg"><label>Precio/sesión</label>
-        <input type="number" id="npaq-precio" value="0" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
+        <input type="number" id="npaq-precio" value="0" oninput="calcTotalPaq()" style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
       </div>
       <div class="fg"><label>Total paquete</label>
         <input type="number" id="npaq-total" value="0" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
@@ -1214,7 +1167,9 @@
 </div>
 
 
-
+<!-- SELECTS OCULTOS PARA PAGOS -->
+<select id="pago-tratamiento" style="display:none"></select>
+<select id="pago-suplemento" style="display:none"></select>
 
 <!-- TOAST -->
 <div id="toast"></div>
