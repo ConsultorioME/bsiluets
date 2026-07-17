@@ -280,6 +280,7 @@ async function cargarUltimosCobros() {
   const { data, error } = await db
     .from('pagos')
     .select('*, pacientes(nombre, apellidos)')
+    .eq('eliminado', false)
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -314,7 +315,10 @@ function renderCobros(data) {
       <td style="font-size:12px;opacity:.7">${p.concepto || '—'}</td>
       <td><span class="badge ${badge}">${p.metodo_pago || '—'}</span></td>
       <td style="color:var(--gold);font-weight:500">$${parseFloat(p.total).toLocaleString()}</td>
-      <td><button class="tb-btn" style="padding:4px 8px;font-size:10px" onclick="reimprimirCobro(\`${p.id}\`)">🖨</button></td>
+      <td style="display:flex;gap:4px">
+      <button class="tb-btn" style="padding:4px 8px;font-size:10px" onclick="reimprimirCobro(\`${p.id}\`)">🖨</button>
+      <button class="tb-btn danger" style="padding:4px 8px;font-size:10px;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c" onclick="eliminarCobro(\`${p.id}\`)">✕</button>
+    </td>
     </tr>`;
   }).join('');
 }
@@ -445,4 +449,23 @@ function obtenerMetodosPago() {
     if (monto > 0) metodos.push(`${sel.value}:${monto}`);
   });
   return metodos.length === 1 ? metodos[0].split(':')[0] : metodos.join('|');
+}
+
+
+// ── ELIMINAR COBRO ──
+async function eliminarCobro(id) {
+  if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación.')) return;
+
+  const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+  const { error } = await db.from('pagos').update({
+    eliminado:      true,
+    eliminado_por:  usuario.usuario || 'admin',
+    eliminado_at:   new Date().toISOString()
+  }).eq('id', id);
+
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  showToast('✓ Cobro eliminado');
+  await cargarUltimosCobros();
+  if (typeof initCaja === 'function') initCaja();
 }
