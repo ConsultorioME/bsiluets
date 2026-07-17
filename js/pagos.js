@@ -202,6 +202,7 @@ async function registrarCobro() {
   const total      = totalTrats + totalSupls;
   const concepto   = [...tratItems.map(t => t.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
+  const metodoPago = obtenerMetodosPago();
 
   const datos = {
     paciente_id:       pacienteId,
@@ -210,7 +211,7 @@ async function registrarCobro() {
     monto_tratamiento: totalTrats,
     monto_suplementos: totalSupls,
     total:             total,
-    metodo_pago:       metodoSeleccionado,
+    metodo_pago:       metodoPago,
     fecha:             fecha,
     folio:             folio,
   };
@@ -258,7 +259,7 @@ async function registrarCobro() {
       ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${total.toLocaleString()}</strong></span></div>
-      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[metodoSeleccionado] || metodoSeleccionado}</span></div>
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoPago.includes('|') ? metodoPago.split('|').map(m => { const [met,mon] = m.split(':'); return `${met} $${parseFloat(mon).toLocaleString()}`; }).join(' + ') : (metodoLabel[metodoPago] || metodoPago)}</span></div>
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
@@ -341,9 +342,26 @@ function limpiarFormPago() {
   document.getElementById('tot-supl').textContent  = '$0';
   document.getElementById('tot-total').textContent = '$0';
 
-  document.querySelectorAll('.pm').forEach(p => p.classList.remove('selected'));
-  document.querySelector('.pm')?.classList.add('selected');
-  metodoSeleccionado = 'efectivo';
+  // Resetear métodos de pago
+  const cont = document.getElementById('metodos-pago-container');
+  if (cont) {
+    cont.innerHTML = '';
+    const div = document.createElement('div');
+    div.style.cssText = 'display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center';
+    div.innerHTML = `
+      <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="credito">📲 Crédito</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+      <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">`;
+    cont.appendChild(div);
+  }
+  const tpEl = document.getElementById('tot-pagado');
+  const tpnEl = document.getElementById('tot-pendiente');
+  if (tpEl) tpEl.textContent = '$0';
+  if (tpnEl) tpnEl.textContent = '$0';
 }
 
 // ── REIMPRIMIR COBRO ──
@@ -385,4 +403,46 @@ async function reimprimirCobro(id) {
     </div>`;
 
   openModal('nota-impr');
+}
+
+// ── MÉTODOS DE PAGO COMBINADOS ──
+function agregarMetodoPago() {
+  const cont = document.getElementById('metodos-pago-container');
+  const div  = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 140px 32px;gap:8px;align-items:center';
+  div.innerHTML = `
+    <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <option value="efectivo">💵 Efectivo</option>
+      <option value="tarjeta">💳 Tarjeta</option>
+      <option value="credito">📲 Crédito</option>
+      <option value="transferencia">🏦 Transferencia</option>
+    </select>
+    <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="this.parentElement.remove();recalcMetodos()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
+  cont.appendChild(div);
+  recalcMetodos();
+}
+
+function recalcMetodos() {
+  let totalPagado = 0;
+  document.querySelectorAll('.metodo-monto').forEach(el => {
+    totalPagado += parseFloat(el.value || 0);
+  });
+  const totalCobro = parseFloat(document.getElementById('tot-total').textContent.replace(/[$,]/g,'')) || 0;
+  const pendiente  = Math.max(0, totalCobro - totalPagado);
+
+  document.getElementById('tot-pagado').textContent    = '$' + totalPagado.toLocaleString();
+  document.getElementById('tot-pendiente').textContent = '$' + pendiente.toLocaleString();
+  document.getElementById('tot-pendiente').style.color = pendiente > 0 ? '#e74c3c' : '#27AE60';
+}
+
+
+function obtenerMetodosPago() {
+  const metodos = [];
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach((sel, i) => {
+    const montos = document.querySelectorAll('#metodos-pago-container .metodo-monto');
+    const monto  = parseFloat(montos[i]?.value || 0);
+    if (monto > 0) metodos.push(`${sel.value}:${monto}`);
+  });
+  return metodos.length === 1 ? metodos[0].split(':')[0] : metodos.join('|');
 }

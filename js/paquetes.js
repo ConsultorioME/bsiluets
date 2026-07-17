@@ -403,7 +403,7 @@ async function generarNotaVis() {
   const fecha    = document.getElementById('vis-fecha').value;
   const tipoPago = document.getElementById('vis-pago-tipo').value;
   const monto    = tipoPago === 'no' ? 0 : (parseFloat(document.getElementById('vis-monto')?.value) || 0);
-  const metodo   = document.getElementById('vis-metodo').value.toLowerCase();
+  const metodo = obtenerMetodosVis();
   const nuevaSesion = paqSelData.sesion_actual + 1;
 
   // 1. Registrar visita
@@ -413,7 +413,7 @@ async function generarNotaVis() {
     numero_sesion:       nuevaSesion,
     fecha:               fecha,
     monto_cobrado:       monto,
-    metodo_pago:         tipoPago === 'no' ? null : metodo,
+    metodo_pago: tipoPago === 'no' ? null : metodo,
     folio:               'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100),
   }]);
   if (errVisita) { showToast('❌ Error al registrar visita: ' + errVisita.message); return; }
@@ -592,4 +592,33 @@ function limpiarFiltrosNotas() {
   if (filtroFecha) filtroFecha.value = hoy;
   if (filtroPac)   filtroPac.value   = '';
   cargarNotasHoy();
+}
+
+
+// ── MÉTODOS DE PAGO VISITA ──
+function agregarMetodoVis() {
+  const cont = document.getElementById('vis-metodos-container');
+  const div  = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 110px 32px;gap:6px;align-items:center';
+  div.innerHTML = `
+    <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <option value="Efectivo">💵 Efectivo</option>
+      <option value="Tarjeta">💳 Tarjeta</option>
+      <option value="Transferencia">🏦 Transferencia</option>
+    </select>
+    <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="this.parentElement.remove()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
+  cont.appendChild(div);
+}
+
+function obtenerMetodosVis() {
+  const metodos = [];
+  const sels   = document.querySelectorAll('#vis-metodos-container .vis-metodo-sel');
+  const montos = document.querySelectorAll('#vis-metodos-container .vis-metodo-monto');
+  sels.forEach((sel, i) => {
+    const monto = parseFloat(montos[i]?.value || 0);
+    if (monto > 0) metodos.push(`${sel.value}:${monto}`);
+  });
+  if (metodos.length === 0) return 'Efectivo';
+  return metodos.length === 1 ? metodos[0].split(':')[0] : metodos.join('|');
 }

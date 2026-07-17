@@ -161,8 +161,8 @@ body{font-family:'Jost',sans-serif;background:var(--black);color:var(--cream);mi
 .admin-content{flex:1;overflow-y:auto;padding:0}
 
 /* MODULE PANELS */
-.module{display:none;padding:28px}
-.module.active{display:block}
+.module{visibility:hidden;height:0;overflow:hidden;padding:0}
+.module.active{visibility:visible;height:auto;overflow:visible;padding:28px}
 
 /* DASHBOARD */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:28px}

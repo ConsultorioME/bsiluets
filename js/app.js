@@ -214,3 +214,25 @@ function limpiarFormUsuario() {
   document.getElementById('usr-rol').value = 'recepcionista';
   document.getElementById('usuario-modal-title').textContent = 'Nuevo Usuario';
 }
+
+
+// ─── DESCARGAR NOTA JPG ───
+async function descargarNotaJPG() {
+  const el = document.getElementById('nota-imprimible');
+  if (!el) return;
+  showToast('⏳ Generando imagen...');
+  try {
+    const canvas = await html2canvas(el, { 
+      scale: 2, 
+      backgroundColor: '#ffffff',
+      useCORS: true 
+    });
+    const link = document.createElement('a');
+    link.download = `nota-bsiluets-${Date.now()}.jpg`;
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+    showToast('✅ Imagen descargada');
+  } catch(e) {
+    showToast('❌ Error al generar imagen');
+  }
+}

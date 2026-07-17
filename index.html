@@ -393,13 +393,24 @@
                 <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
               </div>
               <div style="margin-top:16px">
-                <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
-                <div class="payment-methods">
-                  <div class="pm selected" onclick="selPM(this)" data-metodo="efectivo">💵 Efectivo</div>
-                  <div class="pm" onclick="selPM(this)" data-metodo="tarjeta">💳 Tarjeta</div>
-                  <div class="pm" onclick="selPM(this)" data-metodo="credito">📲 Crédito</div>
+              <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
+              <div style="display:flex;flex-direction:column;gap:8px" id="metodos-pago-container">
+                <div style="display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center">
+                  <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="tarjeta">💳 Tarjeta</option>
+                    <option value="credito">📲 Crédito</option>
+                    <option value="transferencia">🏦 Transferencia</option>
+                  </select>
+                  <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
                 </div>
               </div>
+              <button type="button" class="tb-btn" style="margin-top:8px;font-size:11px" onclick="agregarMetodoPago()">+ Agregar método</button>
+              <div style="margin-top:8px;font-size:12px;color:var(--cream);opacity:.5">
+                Pagado: <span id="tot-pagado" style="color:var(--gold)">$0</span> / 
+                Pendiente: <span id="tot-pendiente" style="color:#e74c3c">$0</span>
+              </div>
+            </div>
               <div class="fg" style="margin-top:14px">
                 <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4">Notas del cobro (opcional)</label>
                 <input type="text" id="pago-notas" placeholder="Ej. Pago parcial, próxima sesión..." style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;margin-top:6px">
@@ -488,18 +499,20 @@
                   </select>
                 </div>
                 <div id="bloque-pago-vis" style="display:none;margin-bottom:12px">
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div>
-                      <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Monto</label>
-                      <input type="number" id="vis-monto" placeholder="0.00" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" oninput="actualizarNotaVis()">
-                    </div>
-                    <div>
+                  <div>
                       <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
-                      <select id="vis-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
-                        <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
-                      </select>
+                      <div style="display:flex;flex-direction:column;gap:6px" id="vis-metodos-container">
+                        <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
+                          <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
+                          </select>
+                          <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+                        </div>
+                      </div>
+                      <button type="button" class="tb-btn" style="margin-top:6px;font-size:11px;width:100%" onclick="agregarMetodoVis()">+ Agregar método</button>
                     </div>
-                  </div>
                 </div>
                 <button class="btn-primary" style="width:100%;padding:12px;margin-top:6px" onclick="generarNotaVis()">Registrar Visita & Generar Nota</button>
               </div>
@@ -846,6 +859,10 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODALES ════ -->
 <div class="modal-overlay" id="modal-nuevo-paciente">
   <div class="modal">
@@ -1016,6 +1033,8 @@
       <div class="fg"><label>No. sesiones</label>
         <select id="npaq-sesiones" onchange="calcTotalPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
           <option value="4">4 sesiones</option>
+          <option value="8">8 sesiones</option>
+          <option value="10">10 sesiones</option>
           <option value="12" selected>12 sesiones</option>
         </select>
       </div>
@@ -1092,7 +1111,8 @@
     <div id="nota-imprimible"></div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('nota-impr')">Cerrar</button>
-      <button class="btn-primary" onclick="showToast('🖨 Enviando a impresora...')">🖨 Imprimir</button>
+      <button class="btn-primary" style="background:var(--charcoal);border:1px solid var(--gold);color:var(--gold)" onclick="descargarNotaJPG()">📥 Descargar</button>
+      <button class="btn-primary" onclick="window.print()">🖨 Imprimir</button>
     </div>
   </div>
 </div>
@@ -1187,6 +1207,7 @@
 <script src="js/gastos.js"></script>
 <script src="js/reportes.js"></script>
 <script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 
 </body>
