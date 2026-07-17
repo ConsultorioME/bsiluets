@@ -49,7 +49,7 @@ function showModule(id,el){
   if(id==='caja') initCaja();
   if(id==='gastos') initGastos();
   if(id==='reportes') initReportes();
-  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); }
+  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); cargarEliminados(); }
   
 }
 
@@ -235,4 +235,37 @@ async function descargarNotaJPG() {
   } catch(e) {
     showToast('❌ Error al generar imagen');
   }
+}
+
+
+
+// ─── HISTORIAL ELIMINADOS ───
+async function cargarEliminados() {
+  const tbody = document.getElementById('tabla-eliminados');
+  if (!tbody) return;
+
+  const { data, error } = await db
+    .from('pagos')
+    .select('*, pacientes(nombre, apellidos)')
+    .eq('eliminado', true)
+    .order('eliminado_at', { ascending: false });
+
+  if (error || !data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;opacity:.3;padding:12px">Sin cobros eliminados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(p => {
+    const nombre    = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
+    const fechaCobro = p.fecha || '—';
+    const fechaElim  = p.eliminado_at ? new Date(p.eliminado_at).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+      <td style="font-size:12px;opacity:.6">${fechaCobro}</td>
+      <td>${nombre}</td>
+      <td style="font-size:12px;opacity:.7">${p.concepto || '—'}</td>
+      <td style="color:#e74c3c">$${parseFloat(p.total).toLocaleString()}</td>
+      <td style="font-size:12px;color:var(--gold)">${p.eliminado_por || '—'}</td>
+      <td style="font-size:11px;opacity:.5">${fechaElim}</td>
+    </tr>`;
+  }).join('');
 }

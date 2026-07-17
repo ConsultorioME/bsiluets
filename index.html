@@ -597,12 +597,16 @@
           <input type="date" id="caja-fecha" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="initCaja()">
         </div>
         <button class="tb-btn" onclick="initCaja()">🔄 Actualizar</button>
+        <button class="tb-btn" onclick="descargarCajaPDF()">📄 Descargar PDF</button>
       </div>
       <div class="kpi-grid" style="margin-bottom:24px">
-        <div class="kpi"><div class="kpi-label">Total del día</div><div class="kpi-val" id="caja-total">—</div></div>
+        <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-val" id="caja-total">—</div></div>
         <div class="kpi"><div class="kpi-label">💵 Efectivo</div><div class="kpi-val" id="caja-efectivo" style="color:#27AE60">—</div></div>
         <div class="kpi"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-val" id="caja-tarjeta" style="color:#2980B9">—</div></div>
+        <div class="kpi"><div class="kpi-label">🏦 Transferencia</div><div class="kpi-val" id="caja-transferencia" style="color:#9b59b6">—</div></div>
         <div class="kpi"><div class="kpi-label">📲 Crédito</div><div class="kpi-val" id="caja-credito" style="color:#e74c3c">—</div></div>
+        <div class="kpi"><div class="kpi-label">💸 Total gastos</div><div class="kpi-val" id="caja-gastos" style="color:#e74c3c">—</div></div>
+        <div class="kpi"><div class="kpi-label">💰 Utilidad neta</div><div class="kpi-val" id="caja-utilidad" style="color:#27AE60">—</div></div>
       </div>
       <div class="dash-grid">
         <div class="card">
@@ -832,6 +836,15 @@
                 <tbody id="tabla-fechas-bloqueadas"></tbody>
               </table>
             </div>
+          </div>
+
+          <!-- HISTORIAL ELIMINACIONES -->
+          <div class="config-card" style="grid-column:1/-1;margin-top:20px">
+            <div class="config-title">Historial de Cobros Eliminados</div>
+            <table>
+              <tr><th>Fecha cobro</th><th>Paciente</th><th>Concepto</th><th>Total</th><th>Eliminado por</th><th>Fecha eliminación</th></tr>
+              <tbody id="tabla-eliminados"></tbody>
+            </table>
           </div>
 
         </div>
@@ -1208,7 +1221,7 @@
 <script src="js/reportes.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </body>
 </html>
