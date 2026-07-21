@@ -6,6 +6,7 @@
 
 // ─── INIT ADMIN ───
 function initAdmin() {
+  initDashboard();
   showModule('dashboard', document.querySelector('.nav-item'));
 }
 
@@ -39,6 +40,7 @@ function showModule(id,el){
   if(el)el.classList.add('active');
   const titles={dashboard:'Dashboard',agenda:'Agenda',pacientes:'Catálogo de Pacientes',tratamientos:'Tratamientos',inventario:'Suplementos / Inventario',pagos:'Pagos',paquetes:'Paquetes & Visitas',creditos:'Créditos & Adeudos',reportes:'Reportes',bot:'Bot / Chat',config:'Configuración'};
   document.getElementById('module-title').textContent=titles[id]||id;
+  if(id==='dashboard')   initDashboard();
   if(id==='pacientes')   cargarPacientes();
   if(id==='tratamientos') cargarTratamientos();
   if(id==='inventario')  cargarInventario();
@@ -268,4 +270,106 @@ async function cargarEliminados() {
       <td style="font-size:11px;opacity:.5">${fechaElim}</td>
     </tr>`;
   }).join('');
+}
+
+
+// ─── DASHBOARD ───
+async function initDashboard() {
+  const hoy   = new Date().toISOString().split('T')[0];
+  const mes   = hoy.substring(0, 7);
+  const desde = `${mes}-01`;
+  const hasta = `${mes}-${new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate()}`;
+
+  // Citas hoy
+  const { data: citasHoy } = await db.from('agenda').select('id,estado').eq('fecha', hoy);
+  const totalCitas    = citasHoy?.length || 0;
+  const pendientes    = citasHoy?.filter(c => c.estado === 'pendiente').length || 0;
+
+  // Ingresos del mes
+  const { data: pagosM } = await db.from('pagos').select('total').gte('fecha', desde).lte('fecha', hasta).eq('eliminado', false);
+  const ingresosM = (pagosM || []).reduce((s, p) => s + parseFloat(p.total || 0), 0);
+
+  // Pacientes activos
+  const { data: pacs } = await db.from('pacientes').select('id').eq('activo', true);
+  const totalPacs = pacs?.length || 0;
+
+  // Paquetes activos
+  const { data: paqsActivos } = await db.from('paquetes').select('id,sesion_actual,total_sesiones').eq('activo', true);
+  const totalPaqs    = paqsActivos?.length || 0;
+  const porVencer    = (paqsActivos || []).filter(p => p.total_sesiones - p.sesion_actual <= 2).length;
+
+  // Stock bajo
+  const { data: stockBajo } = await db.from('inventario').select('id').eq('activo', true).filter('stock', 'lte', 'stock_minimo');
+  const totalStockBajo = stockBajo?.length || 0;
+
+  // KPIs
+  document.getElementById('dash-citas-hoy').textContent    = totalCitas;
+  document.getElementById('dash-citas-pend').textContent   = `${pendientes} pendientes`;
+  document.getElementById('dash-ingresos').textContent     = '$' + ingresosM.toLocaleString();
+  document.getElementById('dash-pacientes').textContent    = totalPacs;
+  document.getElementById('dash-paquetes').textContent     = totalPaqs;
+  document.getElementById('dash-por-vencer').textContent   = `${porVencer} completan pronto`;
+  document.getElementById('dash-stock-bajo').textContent   = totalStockBajo;
+
+  // Próximas citas hoy
+  const { data: proxCitas } = await db
+    .from('agenda')
+    .select('hora, estado, pacientes(nombre,apellidos), tratamientos(nombre)')
+    .eq('fecha', hoy)
+    .order('hora');
+
+  const tbCitas = document.getElementById('dash-tabla-citas');
+  if (tbCitas) {
+    if (!proxCitas || proxCitas.length === 0) {
+      tbCitas.innerHTML = `<tr><td colspan="4" style="text-align:center;opacity:.3;padding:12px">Sin citas hoy</td></tr>`;
+    } else {
+      const badgeEstado = { confirmada:'badge-green', pendiente:'badge-gold', 'en sala':'badge-blue', 'sin confirmar':'badge-gray' };
+      tbCitas.innerHTML = proxCitas.map(c => `<tr>
+        <td style="color:var(--gold)">${c.hora?.substring(0,5) || '—'}</td>
+        <td>${c.pacientes ? c.pacientes.nombre + ' ' + c.pacientes.apellidos : '—'}</td>
+        <td style="font-size:12px;opacity:.7">${c.tratamientos?.nombre || '—'}</td>
+        <td><span class="badge ${badgeEstado[c.estado?.toLowerCase()] || 'badge-gray'}" style="font-size:10px">${c.estado || '—'}</span></td>
+      </tr>`).join('');
+    }
+  }
+
+  // Paquetes por vencer
+  const { data: paqsVencer } = await db
+    .from('paquetes')
+    .select('sesion_actual, total_sesiones, pacientes(nombre,apellidos), tratamientos(nombre)')
+    .eq('activo', true)
+    .order('sesion_actual', { ascending: false })
+    .limit(5);
+
+  const tbPaqs = document.getElementById('dash-tabla-paquetes');
+  if (tbPaqs) {
+    if (!paqsVencer || paqsVencer.length === 0) {
+      tbPaqs.innerHTML = `<tr><td colspan="2" style="text-align:center;opacity:.3;padding:12px">Sin paquetes activos</td></tr>`;
+    } else {
+      tbPaqs.innerHTML = paqsVencer.map(p => `<tr>
+        <td>${p.pacientes ? p.pacientes.nombre + ' ' + p.pacientes.apellidos.charAt(0) + '.' : '—'}</td>
+        <td style="font-size:12px;opacity:.6">Ses. ${p.sesion_actual}/${p.total_sesiones} — ${p.tratamientos?.nombre || '—'}</td>
+      </tr>`).join('');
+    }
+  }
+
+  // Últimos pagos
+  const { data: ultPagos } = await db
+    .from('pagos')
+    .select('total, pacientes(nombre,apellidos)')
+    .eq('eliminado', false)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  const tbPagos = document.getElementById('dash-tabla-pagos');
+  if (tbPagos) {
+    if (!ultPagos || ultPagos.length === 0) {
+      tbPagos.innerHTML = `<tr><td colspan="2" style="text-align:center;opacity:.3;padding:12px">Sin pagos recientes</td></tr>`;
+    } else {
+      tbPagos.innerHTML = ultPagos.map(p => `<tr>
+        <td>${p.pacientes ? p.pacientes.nombre + ' ' + p.pacientes.apellidos.charAt(0) + '.' : '—'}</td>
+        <td style="color:var(--gold);font-weight:500">$${parseFloat(p.total).toLocaleString()}</td>
+      </tr>`).join('');
+    }
+  }
 }

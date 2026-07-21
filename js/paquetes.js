@@ -381,7 +381,7 @@ function actualizarNotaVis() {
 
   document.getElementById('nota-preview-wrap').innerHTML = `
     <div class="nota-preview">
-      <div class="nota-header"><div class="nota-logo">B·Siluets</div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
+      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
       <div class="nota-row"><span>Tratamiento</span><span>${paqSelData.tratamientos?.nombre || '—'}</span></div>
@@ -454,7 +454,7 @@ async function reimprimirNota(visitaId) {
 
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
-      <div class="nota-header"><div class="nota-logo">B·Siluets</div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
+      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
       <div class="nota-folio">Folio: <strong>${v.folio || '—'}</strong> &nbsp;|&nbsp; ${v.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
       <div class="nota-row"><span>Tratamiento</span><span>${trat}</span></div>

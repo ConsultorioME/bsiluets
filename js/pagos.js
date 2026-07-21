@@ -202,7 +202,9 @@ async function registrarCobro() {
   const total      = totalTrats + totalSupls;
   const concepto   = [...tratItems.map(t => t.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
-  const metodoPago = obtenerMetodosPago();
+  const metodoPago  = obtenerMetodosPago();
+  const tipoCobro   = document.querySelector('input[name="tipo-cobro"]:checked')?.value || 'contado';
+  const esCredito   = tipoCobro === 'credito';
 
   const datos = {
     paciente_id:       pacienteId,
@@ -211,7 +213,8 @@ async function registrarCobro() {
     monto_tratamiento: totalTrats,
     monto_suplementos: totalSupls,
     total:             total,
-    metodo_pago:       metodoPago,
+    metodo_pago:       esCredito ? 'credito' : metodoPago,
+    liquidado:         !esCredito,
     fecha:             fecha,
     folio:             folio,
   };
@@ -250,7 +253,7 @@ async function registrarCobro() {
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
       <div class="nota-header">
-        <div class="nota-logo">B·Siluets</div>
+        <div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
         <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
       </div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
@@ -356,7 +359,6 @@ function limpiarFormPago() {
       <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
         <option value="efectivo">💵 Efectivo</option>
         <option value="tarjeta">💳 Tarjeta</option>
-        <option value="credito">📲 Crédito</option>
         <option value="transferencia">🏦 Transferencia</option>
       </select>
       <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">`;
@@ -366,6 +368,13 @@ function limpiarFormPago() {
   const tpnEl = document.getElementById('tot-pendiente');
   if (tpEl) tpEl.textContent = '$0';
   if (tpnEl) tpnEl.textContent = '$0';
+  
+  
+  // Resetear tipo de cobro
+  const contado = document.getElementById('cobro-contado');
+  if (contado) contado.checked = true;
+
+
 }
 
 // ── REIMPRIMIR COBRO ──
@@ -389,7 +398,7 @@ async function reimprimirCobro(id) {
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
       <div class="nota-header">
-        <div class="nota-logo">B·Siluets</div>
+        <div class="nota-logo"><img src="data:image/png;base64,${LOGO_B64}" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
         <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
       </div>
       <div class="nota-folio">Folio: <strong>${p.folio || '—'}</strong> &nbsp;|&nbsp; ${p.fecha}</div>
@@ -399,6 +408,7 @@ async function reimprimirCobro(id) {
       <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${parseFloat(p.total).toLocaleString()}</strong></span></div>
       <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>
+      <div class="nota-row" style="font-size:12px"><span>Tipo de cobro</span><span style="color:${p.liquidado === false ? '#e74c3c' : '#27AE60'}">${p.liquidado === false ? '📋 A crédito' : '✅ Contado'}</span></div>
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
@@ -418,7 +428,6 @@ function agregarMetodoPago() {
     <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
       <option value="efectivo">💵 Efectivo</option>
       <option value="tarjeta">💳 Tarjeta</option>
-      <option value="credito">📲 Crédito</option>
       <option value="transferencia">🏦 Transferencia</option>
     </select>
     <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
