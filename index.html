@@ -512,12 +512,12 @@
                       <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
                       <div style="display:flex;flex-direction:column;gap:6px" id="vis-metodos-container">
                         <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
-                          <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta">💳 Tarjeta</option>
-                            <option value="Transferencia">🏦 Transferencia</option>
+                          <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                            <option value="efectivo">💵 Efectivo</option>
+                            <option value="tarjeta">💳 Tarjeta</option>
+                            <option value="transferencia">🏦 Transferencia</option>
                           </select>
-                          <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+                          <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
                         </div>
                       </div>
                       <button type="button" class="tb-btn" style="margin-top:6px;font-size:11px;width:100%" onclick="agregarMetodoVis()">+ Agregar método</button>
@@ -783,12 +783,12 @@
         <div class="config-grid">
           <div class="config-card">
             <div class="config-title">Datos del Consultorio</div>
-            <div class="fg" style="margin-bottom:10px"><label>Nombre del consultorio</label><input class="config-input" style="width:100%" value="B·Siluets Consultorio Médico Estético"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Dirección</label><input class="config-input" style="width:100%" value="Tepic, Nayarit, México"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Teléfono</label><input class="config-input" style="width:100%" value="311 000 0000"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Correo</label><input class="config-input" style="width:100%" value="contacto@bsiluets.mx"></div>
-            <div class="fg"><label>Instagram</label><input class="config-input" style="width:100%" value="@bsiluets"></div>
-            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Datos guardados correctamente')">Guardar</button>
+            <div class="fg" style="margin-bottom:10px"><label>Nombre del consultorio</label><input id="cfg-nombre" class="config-input" style="width:100%" value="B·Siluets Consultorio Médico Estético"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Dirección</label><input id="cfg-direccion" class="config-input" style="width:100%" value="Tepic, Nayarit, México"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Teléfono</label><input id="cfg-telefono" class="config-input" style="width:100%" value="311 000 0000"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Correo</label><input id="cfg-correo" class="config-input" style="width:100%" value="contacto@bsiluets.mx"></div>
+            <div class="fg"><label>Instagram</label><input id="cfg-instagram" class="config-input" style="width:100%" value="@bsiluets"></div>
+            <button class="btn-primary" style="margin-top:16px" onclick="guardarConfigConsultorio()">Guardar</button>
           </div>
           <div class="config-card">
             <div class="config-title">Horarios de Atención</div>

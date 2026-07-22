@@ -360,15 +360,24 @@ function togglePagoVis() {
   const v = document.getElementById('vis-pago-tipo').value;
   document.getElementById('bloque-pago-vis').style.display = v === 'no' ? 'none' : 'block';
   if (v === 'total' && paqSelData) {
-    document.getElementById('vis-monto').value = paqSelData.precio_total - paqSelData.pagado;
+    const primerInput = document.querySelector('#vis-metodos-container .vis-metodo-monto');
+    if (primerInput) primerInput.value = paqSelData.precio_total - paqSelData.pagado;
   }
   actualizarNotaVis();
+}
+
+// ── SUMA EL MONTO CAPTURADO EN TODOS LOS CAMPOS DE MÉTODO DE PAGO ──
+function obtenerMontoTotalVis() {
+  const montos = document.querySelectorAll('#vis-metodos-container .vis-metodo-monto');
+  let total = 0;
+  montos.forEach(inp => { total += parseFloat(inp.value) || 0; });
+  return total;
 }
 
 function actualizarNotaVis() {
   if (!paqSelData) return;
   const tipoPago = document.getElementById('vis-pago-tipo').value;
-  const monto    = tipoPago === 'no' ? 0 : (parseFloat(document.getElementById('vis-monto')?.value) || 0);
+  const monto    = tipoPago === 'no' ? 0 : obtenerMontoTotalVis();
   const saldoAntes   = paqSelData.precio_total - paqSelData.pagado;
   const saldoDespues = Math.max(0, saldoAntes - monto);
   const folio  = 'NV-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
@@ -381,7 +390,7 @@ function actualizarNotaVis() {
 
   document.getElementById('nota-preview-wrap').innerHTML = `
     <div class="nota-preview">
-      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
+      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>${notaContactoHTML()}</div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
       <div class="nota-row"><span>Tratamiento</span><span>${paqSelData.tratamientos?.nombre || '—'}</span></div>
@@ -391,10 +400,10 @@ function actualizarNotaVis() {
         <span>${esZero ? 'ASISTENCIA REGISTRADA' : 'TOTAL COBRADO'}</span>
         <span><strong>$${monto.toLocaleString()}.00</strong></span>
       </div>
-      ${!esZero ? `<div class="nota-row" style="font-size:12px"><span>Método</span><span>${document.getElementById('vis-metodo')?.value || 'Efectivo'}</span></div>` : ''}
+      ${!esZero ? `<div class="nota-row" style="font-size:12px"><span>Método</span><span>${formatearMetodoVis(obtenerMetodosVis())}</span></div>` : ''}
       <div class="nota-saldo-box">Saldo pendiente: <strong>$${saldoDespues.toLocaleString()}</strong>${saldoDespues === 0 ? ' — ✓ LIQUIDADO' : ''}</div>
       <div class="nota-firma"><div><div class="nota-linea">Recibió</div></div><div><div class="nota-linea">Paciente</div></div></div>
-      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 }
 
@@ -402,7 +411,7 @@ async function generarNotaVis() {
   if (!paqSelData) { showToast('⚠ Selecciona un paciente con paquete activo'); return; }
   const fecha    = document.getElementById('vis-fecha').value;
   const tipoPago = document.getElementById('vis-pago-tipo').value;
-  const monto    = tipoPago === 'no' ? 0 : (parseFloat(document.getElementById('vis-monto')?.value) || 0);
+  const monto    = tipoPago === 'no' ? 0 : obtenerMontoTotalVis();
   const metodo = obtenerMetodosVis();
   const nuevaSesion = paqSelData.sesion_actual + 1;
 
@@ -454,7 +463,7 @@ async function reimprimirNota(visitaId) {
 
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
-      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div><div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div></div>
+      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>${notaContactoHTML()}</div>
       <div class="nota-folio">Folio: <strong>${v.folio || '—'}</strong> &nbsp;|&nbsp; ${v.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
       <div class="nota-row"><span>Tratamiento</span><span>${trat}</span></div>
@@ -466,7 +475,7 @@ async function reimprimirNota(visitaId) {
       </div>
       <div class="nota-saldo-box">Saldo pendiente: <strong>$${saldo.toLocaleString()}</strong>${saldo <= 0 ? ' — ✓ LIQUIDADO' : ''}</div>
       <div class="nota-firma"><div><div class="nota-linea">Recibió</div></div><div><div class="nota-linea">Paciente</div></div></div>
-      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
     </div>`;
   openModal('nota-impr');
 }
@@ -576,7 +585,7 @@ function renderNotasFiltradas(notas) {
       <td style="color:${esCero ? 'var(--info,#2980B9)' : 'var(--success)'}">
         ${esCero ? '$0.00 — Solo visita' : '$' + monto.toLocaleString()}
       </td>
-      <td>${v.metodo_pago ? `<span class="badge badge-green">${v.metodo_pago}</span>` : '<span class="badge badge-gray">—</span>'}</td>
+      <td>${v.metodo_pago ? `<span class="badge badge-green">${formatearMetodoVis(v.metodo_pago)}</span>` : '<span class="badge badge-gray">—</span>'}</td>
       <td>${saldo <= 0 ? '<span class="badge badge-green">Liquidado</span>' : `<span class="badge badge-warn">$${saldo.toLocaleString()}</span>`}</td>
       <td><button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="reimprimirNota(\`${v.id}\`)">🖨</button></td>
     </tr>`;
@@ -601,13 +610,13 @@ function agregarMetodoVis() {
   const div  = document.createElement('div');
   div.style.cssText = 'display:grid;grid-template-columns:1fr 110px 32px;gap:6px;align-items:center';
   div.innerHTML = `
-    <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
-      <option value="Efectivo">💵 Efectivo</option>
-      <option value="Tarjeta">💳 Tarjeta</option>
-      <option value="Transferencia">🏦 Transferencia</option>
+    <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <option value="efectivo">💵 Efectivo</option>
+      <option value="tarjeta">💳 Tarjeta</option>
+      <option value="transferencia">🏦 Transferencia</option>
     </select>
-    <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
-    <button type="button" onclick="this.parentElement.remove()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
+    <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="this.parentElement.remove();actualizarNotaVis()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
   cont.appendChild(div);
 }
 
@@ -619,6 +628,16 @@ function obtenerMetodosVis() {
     const monto = parseFloat(montos[i]?.value || 0);
     if (monto > 0) metodos.push(`${sel.value}:${monto}`);
   });
-  if (metodos.length === 0) return 'Efectivo';
+  if (metodos.length === 0) return 'efectivo';
   return metodos.length === 1 ? metodos[0].split(':')[0] : metodos.join('|');
+}
+
+// ── FORMATEAR MÉTODO DE PAGO PARA MOSTRAR (capitaliza, soporta combinados con | y :) ──
+function formatearMetodoVis(valor) {
+  if (!valor) return '—';
+  const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  return valor.split('|').map(parte => {
+    const [met, monto] = parte.split(':');
+    return monto ? `${capitalizar(met)} $${parseFloat(monto).toLocaleString()}` : capitalizar(met);
+  }).join(' + ');
 }
