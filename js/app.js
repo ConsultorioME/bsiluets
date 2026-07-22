@@ -6,8 +6,71 @@
 
 // ─── INIT ADMIN ───
 function initAdmin() {
+  cargarConfigConsultorio();
   initDashboard();
   showModule('dashboard', document.querySelector('.nav-item'));
+}
+
+// ─── DATOS DEL CONSULTORIO (dinámicos para Notas de Venta) ───
+window.configConsultorio = {
+  nombre:     'B·Siluets Consultorio Médico Estético',
+  direccion:  'Tepic, Nayarit, México',
+  telefono:   '311 000 0000',
+  correo:     'contacto@bsiluets.mx',
+  instagram:  '@bsiluets'
+};
+
+async function cargarConfigConsultorio() {
+  try {
+    const { data, error } = await db.from('configuracion').select('*').eq('id', 1).single();
+    if (!error && data) {
+      window.configConsultorio = {
+        nombre:    data.nombre    || window.configConsultorio.nombre,
+        direccion: data.direccion || window.configConsultorio.direccion,
+        telefono:  data.telefono  || window.configConsultorio.telefono,
+        correo:    data.correo    || window.configConsultorio.correo,
+        instagram: data.instagram || window.configConsultorio.instagram,
+      };
+    }
+  } catch (e) {
+    // Si la tabla no existe todavía o falla la consulta, se usan los valores por defecto
+  }
+  const campos = { 'cfg-nombre':'nombre', 'cfg-direccion':'direccion', 'cfg-telefono':'telefono', 'cfg-correo':'correo', 'cfg-instagram':'instagram' };
+  Object.keys(campos).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = window.configConsultorio[campos[id]];
+  });
+}
+
+async function guardarConfigConsultorio() {
+  const datos = {
+    id:        1,
+    nombre:    document.getElementById('cfg-nombre').value.trim(),
+    direccion: document.getElementById('cfg-direccion').value.trim(),
+    telefono:  document.getElementById('cfg-telefono').value.trim(),
+    correo:    document.getElementById('cfg-correo').value.trim(),
+    instagram: document.getElementById('cfg-instagram').value.trim(),
+  };
+  const { error } = await db.from('configuracion').upsert([datos]);
+  if (error) { showToast('❌ Error al guardar: ' + error.message); return; }
+  window.configConsultorio = {
+    nombre: datos.nombre, direccion: datos.direccion, telefono: datos.telefono,
+    correo: datos.correo, instagram: datos.instagram
+  };
+  showToast('✓ Datos guardados correctamente');
+}
+
+// Bloque de contacto que se inserta en las Notas de Venta (Pagos, Paquetes & Visitas, Créditos)
+function notaContactoHTML() {
+  const c = window.configConsultorio || {};
+  const partes = [c.telefono, c.correo, c.instagram].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  return `<div class="nota-sub-hdr">${c.direccion || ''}</div>` +
+    (partes ? `<div style="font-size:11px;text-align:center;opacity:.6;margin-bottom:4px">${partes}</div>` : '');
+}
+
+// Nombre del consultorio para el pie de la Nota de Venta
+function notaNombreConsultorio() {
+  return (window.configConsultorio && window.configConsultorio.nombre) || 'B·Siluets';
 }
 
 // ─── BOT ───
@@ -51,7 +114,7 @@ function showModule(id,el){
   if(id==='caja') initCaja();
   if(id==='gastos') initGastos();
   if(id==='reportes') initReportes();
-  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); cargarEliminados(); }
+  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); cargarEliminados(); cargarConfigConsultorio(); }
   
 }
 

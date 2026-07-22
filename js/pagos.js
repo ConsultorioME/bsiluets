@@ -254,7 +254,7 @@ async function registrarCobro() {
     <div class="nota-preview">
       <div class="nota-header">
         <div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
-        <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
+        ${notaContactoHTML()}
       </div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
@@ -267,7 +267,7 @@ async function registrarCobro() {
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
       </div>
-      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
   openModal('nota-impr');
@@ -399,7 +399,7 @@ async function reimprimirCobro(id) {
     <div class="nota-preview">
       <div class="nota-header">
         <div class="nota-logo"><img src="data:image/png;base64,${LOGO_B64}" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
-        <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
+        ${notaContactoHTML()}
       </div>
       <div class="nota-folio">Folio: <strong>${p.folio || '—'}</strong> &nbsp;|&nbsp; ${p.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
@@ -413,7 +413,7 @@ async function reimprimirCobro(id) {
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
       </div>
-      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
   openModal('nota-impr');

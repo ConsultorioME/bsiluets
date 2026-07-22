@@ -72,8 +72,7 @@ async function guardarTratamiento() {
     precio:              parseFloat(document.getElementById('trat-precio').value) || 0,
     descripcion:         document.getElementById('trat-descripcion').value.trim(),
     maneja_paquete:      document.getElementById('trat-maneja-paquete').checked,
-    sesiones_paquete_8:  document.getElementById('trat-paq8').checked,
-    sesiones_paquete_10: document.getElementById('trat-paq10').checked,
+    
   };
   if (!datos.nombre) { showToast('⚠ El nombre es obligatorio'); return; }
   if (!datos.precio)  { showToast('⚠ El precio es obligatorio'); return; }
@@ -127,7 +126,8 @@ function limpiarFormTratamiento() {
   });
   const cat = document.getElementById('trat-categoria');
   if (cat) cat.value = 'Medicina Estética';
-  document.getElementById('bloque-paquetes-opts').style.display = 'none';
+  const bloquePaq = document.getElementById('bloque-paquetes-opts');
+  if (bloquePaq) bloquePaq.style.display = 'none';
   const titulo = document.querySelector('#modal-nuevo-trat .modal-title');
   if (titulo) titulo.textContent = 'Nuevo Tratamiento';
 }
