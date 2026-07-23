@@ -1,164 +1,255 @@
 // ─────────────────────────────────────────
-//  B·Siluets — Módulo Agenda
+//  B·Siluets — Módulo Agenda (Vista Semanal)
 //  Software SIE © 2025
 // ─────────────────────────────────────────
 
-let calDate = new Date();
-let fechaSeleccionada = new Date().toISOString().split('T')[0];
+// ── CONFIG DE LA CUADRÍCULA ──
+const HORA_INICIO = 7;   // 7:00 am
+const HORA_FIN    = 21;  // 9:00 pm
+const ROW_H       = 52;  // px por hora
+
+// ── ESTADO ──
+let agendaActiva  = 'Dra. Bianca Salas';
+let semanaInicio  = getLunesSemana(new Date());
+
+let fechasBloqueadasSet = new Set();
+window._fechasBloqueadasData = {};
+
+// ── HELPERS DE FECHAS ──
+function getLunesSemana(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay(); // 0=Domingo
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function fmtFecha(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function diasSemanaArray() {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(semanaInicio);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
 
 // ── AGENDA ACTIVA ──
-let agendaActiva = 'Dra. Bianca Salas';
-
 function selAgenda(tipo, el) {
   agendaActiva = tipo;
   document.querySelectorAll('.agenda-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  renderCal();
-  if (fechaSeleccionada) cargarCitasDia(fechaSeleccionada);
+  cargarCitasSemana();
 }
-
 
 // ── INICIALIZAR AGENDA ──
 async function initAgenda() {
-  renderCal();
-  await cargarCitasDia(fechaSeleccionada);
   await cargarSelectsPacientesTratamientos();
-  marcarDiasConCitas();
-  await marcarDiasConCitas();
-  await cargarFechasBloqueadas();
+  await cargarCitasSemana();
 }
 
-// ── RENDER CALENDARIO ──
-function renderCal() {
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  document.getElementById('cal-month-lbl').textContent =
-    `${months[calDate.getMonth()]} ${calDate.getFullYear()}`;
+// ── NAVEGACIÓN DE SEMANA ──
+function semanaNav(dir) {
+  semanaInicio.setDate(semanaInicio.getDate() + dir * 7);
+  cargarCitasSemana();
+}
 
-  const g = document.getElementById('cal-grid');
-  g.innerHTML = '';
+function irHoySemana() {
+  semanaInicio = getLunesSemana(new Date());
+  cargarCitasSemana();
+}
 
-  ['Do','Lu','Ma','Mi','Ju','Vi','Sa'].forEach(d => {
-    const s = document.createElement('div');
-    s.className = 'cal-dow';
-    s.textContent = d;
-    g.appendChild(s);
+// ── CARGAR CITAS + BLOQUEOS DE LA SEMANA VISIBLE ──
+async function cargarCitasSemana() {
+  const dias     = diasSemanaArray();
+  const fechaIni = fmtFecha(dias[0]);
+  const fechaFin = fmtFecha(dias[6]);
+
+  const grid = document.getElementById('semana-grid');
+  if (grid) grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--cream);opacity:.3;font-size:13px">Cargando...</div>`;
+
+  const [{ data: citas, error: errCitas }, { data: bloqueos }] = await Promise.all([
+    db.from('agenda')
+      .select('*, pacientes(nombre,apellidos), tratamientos(nombre)')
+      .gte('fecha', fechaIni).lte('fecha', fechaFin)
+      .eq('agenda_tipo', agendaActiva)
+      .order('hora'),
+    db.from('fechas_bloqueadas')
+      .select('fecha, razon, tipo')
+      .gte('fecha', fechaIni).lte('fecha', fechaFin)
+  ]);
+
+  if (errCitas) {
+    if (grid) grid.innerHTML = `<div style="color:#e74c3c;padding:16px;font-size:13px">Error: ${errCitas.message}</div>`;
+    return;
+  }
+
+  fechasBloqueadasSet = new Set();
+  window._fechasBloqueadasData = {};
+  const bloqueosPorDia = {};
+  (bloqueos || []).forEach(b => {
+    fechasBloqueadasSet.add(b.fecha);
+    window._fechasBloqueadasData[b.fecha] = b;
+    bloqueosPorDia[b.fecha] = b;
   });
 
-  const hoy = new Date();
-  const firstDay = new Date(calDate.getFullYear(), calDate.getMonth(), 1).getDay();
-  const daysInMonth = new Date(calDate.getFullYear(), calDate.getMonth() + 1, 0).getDate();
+  const citasPorDia = {};
+  (citas || []).forEach(c => {
+    if (!citasPorDia[c.fecha]) citasPorDia[c.fecha] = [];
+    citasPorDia[c.fecha].push(c);
+  });
 
-  for (let i = 0; i < firstDay; i++) {
-    const e = document.createElement('div');
-    e.className = 'cal-day empty';
-    g.appendChild(e);
+  renderSemanaGrid(citasPorDia, bloqueosPorDia);
+
+  const resumen = document.getElementById('resumen-semana');
+  if (resumen) {
+    const total       = (citas || []).length;
+    const confirmadas = (citas || []).filter(c => c.estado === 'confirmada').length;
+    const pendientes  = (citas || []).filter(c => c.estado === 'pendiente').length;
+    resumen.innerHTML = total > 0
+      ? `<span style="color:var(--gold)">${total} cita${total > 1 ? 's' : ''} esta semana</span>
+         <span style="opacity:.5;margin:0 6px">·</span>
+         <span style="color:#27AE60">${confirmadas} confirmada${confirmadas !== 1 ? 's' : ''}</span>
+         <span style="opacity:.5;margin:0 6px">·</span>
+         <span style="color:#E67E22">${pendientes} pendiente${pendientes !== 1 ? 's' : ''}</span>`
+      : `<span style="color:var(--cream);opacity:.35">Sin citas esta semana</span>`;
   }
-
-  for (let i = 1; i <= daysInMonth; i++) {
-    const e = document.createElement('div');
-    e.className = 'cal-day';
-    e.textContent = i;
-
-    const fechaStr = `${calDate.getFullYear()}-${String(calDate.getMonth()+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-
-    if (i === hoy.getDate() && calDate.getMonth() === hoy.getMonth() &&
-        calDate.getFullYear() === hoy.getFullYear()) {
-      e.classList.add('today');
-    }
-    if (fechaStr === fechaSeleccionada) e.classList.add('selected');
-
-    e.onclick = () => seleccionarDia(fechaStr, e);
-    g.appendChild(e);
-  }
-
-  cargarFechasBloqueadas();
-  marcarDiasConCitas();
 }
 
-function calNav(dir) {
-  calDate = new Date(calDate.getFullYear(), calDate.getMonth() + dir, 1);
-  renderCal();
-}
+// ── DIBUJAR LA CUADRÍCULA SEMANAL ──
+function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
+  const dias        = diasSemanaArray();
+  const hoyStr       = fmtFecha(new Date());
+  const nombresDia   = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  const meses        = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-// ── SELECCIONAR DIA ──
-async function seleccionarDia(fecha, el) {
-  fechaSeleccionada = fecha;
-  document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('selected'));
-  el.classList.add('selected');
-  await cargarCitasDia(fecha);
-}
+  const ini = dias[0], fin = dias[6];
+  const lbl = ini.getMonth() === fin.getMonth()
+    ? `${ini.getDate()} – ${fin.getDate()} de ${meses[ini.getMonth()]} ${ini.getFullYear()}`
+    : `${ini.getDate()} ${meses[ini.getMonth()]} – ${fin.getDate()} ${meses[fin.getMonth()]} ${fin.getFullYear()}`;
+  const semanaLbl = document.getElementById('semana-lbl');
+  if (semanaLbl) semanaLbl.textContent = lbl;
 
-// ── CARGAR CITAS DEL DIA ──
-async function cargarCitasDia(fecha) {
-  const slotList   = document.getElementById('slot-list');
-  const slotHeader = document.getElementById('slot-header');
-  const resumen    = document.getElementById('resumen-dia');
+  const totalHoras  = HORA_FIN - HORA_INICIO;
+  const alturaTotal = totalHoras * ROW_H;
 
-  if (!slotList) return;
-
-  const d = new Date(fecha + 'T12:00:00');
-  const opciones = { weekday:'long', day:'numeric', month:'long', year:'numeric' };
-  if (slotHeader) slotHeader.textContent = `Citas — ${d.toLocaleDateString('es-MX', opciones)}`;
-
-  slotList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--cream);opacity:.3;font-size:13px">Cargando...</div>`;
-
-  const { data, error } = await db
-    .from('agenda')
-    .select('*, pacientes(nombre,apellidos), tratamientos(nombre)')
-    .eq('fecha', fecha)
-    .eq('agenda_tipo', agendaActiva)
-    .order('hora');
-
-  if (error) {
-    slotList.innerHTML = `<div style="color:#e74c3c;padding:16px;font-size:13px">Error: ${error.message}</div>`;
-    return;
+  let horasHTML = `<div style="height:${ROW_H}px"></div>`;
+  for (let h = HORA_INICIO; h < HORA_FIN; h++) {
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    horasHTML += `<div style="height:${ROW_H}px;text-align:right;padding-right:8px;font-size:10px;color:var(--cream);opacity:.35;box-sizing:border-box">${h12}${h < 12 ? 'am' : 'pm'}</div>`;
   }
 
-  if (!data || data.length === 0) {
-    slotList.innerHTML = `<div style="text-align:center;padding:40px;color:var(--cream);opacity:.25;font-size:13px">Sin citas para este dia</div>`;
-    if (resumen) resumen.innerHTML = `<span style="color:var(--cream);opacity:.35">Sin citas agendadas</span>`;
-    return;
-  }
+  const coloresEstado = {
+    pendiente:  '#E8B84B',
+    confirmada: '#27AE60',
+    en_sala:    '#2980B9',
+    completada: '#8a8a8a',
+    cancelada:  '#e74c3c',
+  };
 
-  const confirmadas = data.filter(c => c.estado === 'confirmada').length;
-  const pendientes  = data.filter(c => c.estado === 'pendiente').length;
-  if (resumen) resumen.innerHTML = `
-    <span style="color:var(--gold)">${data.length} cita${data.length > 1 ? 's' : ''}</span>
-    <span style="opacity:.5;margin:0 6px">·</span>
-    <span style="color:#27AE60">${confirmadas} confirmada${confirmadas !== 1 ? 's' : ''}</span>
-    <span style="opacity:.5;margin:0 6px">·</span>
-    <span style="color:#E67E22">${pendientes} pendiente${pendientes !== 1 ? 's' : ''}</span>`;
+  const colsHTML = dias.map(d => {
+    const fecha  = fmtFecha(d);
+    const esHoy  = fecha === hoyStr;
+    const bloqueo = bloqueosPorDia[fecha];
+    const citas  = citasPorDia[fecha] || [];
 
-  const badges = { pendiente:'badge-gold', confirmada:'badge-green', en_sala:'badge-blue', completada:'badge-gray', cancelada:'badge-red' };
-  const labels = { pendiente:'Pendiente', confirmada:'Confirmada', en_sala:'En sala', completada:'Completada', cancelada:'Cancelada' };
+    const bloques = citas.map(c => {
+      const partes    = (c.hora || '00:00').substring(0, 5).split(':').map(Number);
+      const inicioMin = partes[0] * 60 + partes[1];
+      const dur       = c.duracion_min || 60;
+      let top   = ((inicioMin - HORA_INICIO * 60) / 60) * ROW_H;
+      let alto  = Math.max((dur / 60) * ROW_H - 2, 18);
+      top = Math.max(0, Math.min(top, alturaTotal - 4));
+      const color  = coloresEstado[c.estado] || coloresEstado.pendiente;
+      const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : 'Sin paciente';
+      const trat   = c.tratamientos?.nombre || '';
+      const horaTxt = c.hora?.substring(0, 5) || '';
+      return `<div onclick="event.stopPropagation();editarCita('${c.id}')"
+                title="${horaTxt} — ${nombre} — ${trat}"
+                style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:pointer;font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Jost',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
+                <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${horaTxt} ${nombre}</strong>
+                <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">${trat}</span>
+              </div>`;
+    }).join('');
 
-  slotList.innerHTML = data.map(c => {
-    const hora   = c.hora?.substring(0,5) || '--:--';
-    const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : 'Sin paciente';
-    const trat   = c.tratamientos?.nombre || '--';
-    const badge  = badges[c.estado] || 'badge-gray';
-    const label  = labels[c.estado] || c.estado;
+    const overlayBloqueo = bloqueo
+      ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(231,76,60,.10),rgba(231,76,60,.10) 8px,rgba(231,76,60,.20) 8px,rgba(231,76,60,.20) 16px);display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;font-size:10px;color:#e74c3c;z-index:2" title="${bloqueo.razon}">🔒 ${bloqueo.razon}</div>`
+      : '';
+
     return `
-      <div class="slot-item">
-        <span class="slot-time">${hora}</span>
-        <div class="slot-info">
-          <div class="slot-patient">${nombre}</div>
-          <div class="slot-treatment">${trat}${c.notas ? ' · ' + c.notas : ''}</div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <div style="height:${ROW_H}px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid rgba(201,168,108,.1);background:${esHoy ? 'rgba(201,168,108,.1)' : 'transparent'}">
+          <div style="font-size:10px;letter-spacing:.1em;color:var(--gold);opacity:.6">${nombresDia[d.getDay()]}</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:19px;color:${esHoy ? 'var(--gold)' : 'var(--cream)'}">${d.getDate()}</div>
         </div>
-        <span class="badge ${badge}" style="align-self:center">${label}</span>
-        <div class="slot-actions">
-          <button class="icon-btn" onclick="editarCita(\`${c.id}\`)">✏</button>
-          <button class="icon-btn" onclick="eliminarCita(\`${c.id}\`)">✕</button>
+        <div onclick="crearCitaEnSlot(event,'${fecha}')"
+             style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(201,168,108,.1);cursor:${bloqueo ? 'not-allowed' : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(201,168,108,.07) 0, rgba(201,168,108,.07) 1px, transparent 1px, transparent ${ROW_H}px)">
+          ${bloques}
+          ${overlayBloqueo}
         </div>
       </div>`;
   }).join('');
+
+  const grid = document.getElementById('semana-grid');
+  if (!grid) return;
+  grid.innerHTML = `
+    <div style="display:grid;grid-template-columns:46px repeat(7,minmax(120px,1fr));min-width:900px">
+      <div style="display:flex;flex-direction:column">${horasHTML}</div>
+      ${colsHTML}
+    </div>`;
+}
+
+// ── CREAR CITA AL DAR CLIC EN UN ESPACIO VACÍO DE LA CUADRÍCULA ──
+function crearCitaEnSlot(ev, fecha) {
+  const bloqueo = verificarFechaBloqueada(fecha);
+  if (bloqueo) {
+    const tipos = { vacaciones: 'Vacaciones', cierre: 'Cierre del consultorio', festivo: 'Día festivo', otro: 'Otro motivo' };
+    showToast(`⛔ No se pueden agendar citas — ${tipos[bloqueo.tipo] || bloqueo.tipo}: ${bloqueo.razon}`);
+    return;
+  }
+
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const y = ev.clientY - rect.top;
+  let totalMin = HORA_INICIO * 60 + (y / ROW_H) * 60;
+  totalMin = Math.round(totalMin / 15) * 15;
+  totalMin = Math.max(HORA_INICIO * 60, Math.min(HORA_FIN * 60 - 15, totalMin));
+  const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+  const mm = String(totalMin % 60).padStart(2, '0');
+
+  document.getElementById('cita-fecha').value = fecha;
+  document.getElementById('cita-hora').value  = `${hh}:${mm}`;
+  checkFechaBloqueada(fecha);
+  cargarSelectsPacientesTratamientos();
+  openModal('nueva-cita');
+}
+
+// ── ABRIR MODAL DESDE EL BOTÓN "+ NUEVA CITA" ──
+function abrirModalCita() {
+  const hoy   = fmtFecha(new Date());
+  const dias  = diasSemanaArray().map(fmtFecha);
+  const fechaDefault = dias.includes(hoy) ? hoy : dias[0];
+
+  const bloqueo = verificarFechaBloqueada(fechaDefault);
+  if (bloqueo) {
+    const tipos = { vacaciones: 'Vacaciones', cierre: 'Cierre del consultorio', festivo: 'Día festivo', otro: 'Otro motivo' };
+    showToast(`⛔ No se pueden agendar citas — ${tipos[bloqueo.tipo] || bloqueo.tipo}: ${bloqueo.razon}`);
+    return;
+  }
+
+  document.getElementById('cita-fecha').value = fechaDefault;
+  document.getElementById('cita-hora').value  = '';
+  checkFechaBloqueada(fechaDefault);
+  cargarSelectsPacientesTratamientos();
+  openModal('nueva-cita');
 }
 
 // ── CARGAR SELECTS ──
 async function cargarSelectsPacientesTratamientos() {
-  const { data: pacientes }    = await db.from('pacientes').select('id,nombre,apellidos').eq('activo',true).order('nombre');
-  const { data: tratamientos } = await db.from('tratamientos').select('id,nombre').eq('activo',true).order('nombre');
+  const { data: pacientes }    = await db.from('pacientes').select('id,nombre,apellidos').eq('activo', true).order('nombre');
+  const { data: tratamientos } = await db.from('tratamientos').select('id,nombre').eq('activo', true).order('nombre');
 
   const selPac  = document.getElementById('cita-paciente');
   const selTrat = document.getElementById('cita-tratamiento');
@@ -188,7 +279,6 @@ async function guardarCita() {
   if (!datos.fecha) { showToast('⚠ La fecha es obligatoria'); return; }
   if (!datos.hora)  { showToast('⚠ La hora es obligatoria'); return; }
 
-  // Verificar si la fecha está bloqueada
   const bloqueo = verificarFechaBloqueada(datos.fecha);
   if (bloqueo) {
     showToast(`⛔ Fecha bloqueada: ${bloqueo.razon}`);
@@ -206,8 +296,11 @@ async function guardarCita() {
   closeModal('nueva-cita');
   showToast(id ? '✓ Cita actualizada' : '✓ Cita agendada correctamente');
   limpiarFormCita();
-  await cargarCitasDia(datos.fecha);
-  await marcarDiasConCitas();
+
+  // Si la cita cae fuera de la semana visible, saltamos a esa semana
+  const fechaCita = new Date(datos.fecha + 'T12:00:00');
+  semanaInicio = getLunesSemana(fechaCita);
+  await cargarCitasSemana();
 }
 
 // ── EDITAR CITA ──
@@ -217,14 +310,14 @@ async function editarCita(id) {
 
   await cargarSelectsPacientesTratamientos();
 
-  document.getElementById('cita-id').value           = c.id;
-  document.getElementById('cita-paciente').value     = c.paciente_id    || '';
-  document.getElementById('cita-tratamiento').value  = c.tratamiento_id || '';
-  document.getElementById('cita-fecha').value        = c.fecha;
-  document.getElementById('cita-hora').value         = c.hora?.substring(0,5) || '';
-  document.getElementById('cita-duracion').value     = c.duracion_min || 60;
-  document.getElementById('cita-estado').value       = c.estado || 'pendiente';
-  document.getElementById('cita-notas').value        = c.notas || '';
+  document.getElementById('cita-id').value          = c.id;
+  document.getElementById('cita-paciente').value    = c.paciente_id    || '';
+  document.getElementById('cita-tratamiento').value = c.tratamiento_id || '';
+  document.getElementById('cita-fecha').value       = c.fecha;
+  document.getElementById('cita-hora').value        = c.hora?.substring(0, 5) || '';
+  document.getElementById('cita-duracion').value    = c.duracion_min || 60;
+  document.getElementById('cita-estado').value      = c.estado || 'pendiente';
+  document.getElementById('cita-notas').value       = c.notas || '';
 
   document.querySelector('#modal-nueva-cita .modal-title').textContent = 'Editar Cita';
   openModal('nueva-cita');
@@ -236,96 +329,20 @@ async function eliminarCita(id) {
   const { error } = await db.from('agenda').delete().eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
   showToast('✓ Cita eliminada');
-  await cargarCitasDia(fechaSeleccionada);
+  await cargarCitasSemana();
 }
 
 // ── LIMPIAR FORM ──
 function limpiarFormCita() {
-  ['cita-id','cita-notas'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  ['cita-paciente','cita-tratamiento'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('cita-estado').value    = 'pendiente';
-  document.getElementById('cita-duracion').value  = '60';
+  ['cita-id', 'cita-notas'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['cita-paciente', 'cita-tratamiento'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('cita-estado').value   = 'pendiente';
+  document.getElementById('cita-duracion').value = '60';
   const titulo = document.querySelector('#modal-nueva-cita .modal-title');
   if (titulo) titulo.textContent = 'Nueva Cita';
 }
 
-// ── MARCAR DÍAS CON CITAS EN EL CALENDARIO ──
-async function marcarDiasConCitas() {
-  const year  = calDate.getFullYear();
-  const month = String(calDate.getMonth() + 1).padStart(2, '0');
-  const desde = `${year}-${month}-01`;
-  const hasta = `${year}-${month}-${new Date(year, calDate.getMonth()+1, 0).getDate()}`;
-
-  const { data } = await db
-    .from('agenda')
-    .select('fecha')
-    .gte('fecha', desde)
-    .lte('fecha', hasta)
-    .eq('agenda_tipo', agendaActiva);
-
-  if (!data || data.length === 0) return;
-
-  // Usar Set con fechas exactas sin conversión de zona horaria
-  const diasConCitas = new Set(data.map(c => c.fecha));
-
-  document.querySelectorAll('.cal-day').forEach(el => {
-    if (!el.textContent.trim() || el.classList.contains('empty')) return;
-    const dia = String(el.textContent.trim()).padStart(2, '0');
-    const fechaEl = `${year}-${month}-${dia}`;
-    if (diasConCitas.has(fechaEl)) {
-      el.classList.add('has-event');
-    } else {
-      el.classList.remove('has-event');
-    }
-  });
-}
-
 // ── FECHAS BLOQUEADAS ──
-let fechasBloqueadasSet = new Set();
-
-async function cargarFechasBloqueadas() {
-  const year  = calDate.getFullYear();
-  const month = String(calDate.getMonth() + 1).padStart(2, '0');
-  const desde = `${year}-${month}-01`;
-  const hasta = `${year}-${month}-${new Date(year, calDate.getMonth()+1, 0).getDate()}`;
-
-  const { data } = await db
-    .from('fechas_bloqueadas')
-    .select('fecha, razon, tipo')
-    .gte('fecha', desde)
-    .lte('fecha', hasta);
-
-  fechasBloqueadasSet = new Set();
-  window._fechasBloqueadasData = {};
-
-  if (data) {
-    data.forEach(f => {
-      fechasBloqueadasSet.add(f.fecha);
-      window._fechasBloqueadasData[f.fecha] = f;
-    });
-  }
-
-  marcarDiasBloqueados();
-}
-
-function marcarDiasBloqueados() {
-  const year  = calDate.getFullYear();
-  const month = String(calDate.getMonth() + 1).padStart(2, '0');
-
-  document.querySelectorAll('.cal-day').forEach(el => {
-    if (!el.textContent.trim() || el.classList.contains('empty')) return;
-    const dia     = String(el.textContent.trim()).padStart(2, '0');
-    const fechaEl = `${year}-${month}-${dia}`;
-    if (fechasBloqueadasSet.has(fechaEl)) {
-      el.classList.add('blocked');
-      el.title = window._fechasBloqueadasData[fechaEl]?.razon || 'Fecha bloqueada';
-    } else {
-      el.classList.remove('blocked');
-      el.title = '';
-    }
-  });
-}
-
 async function guardarBloqueo() {
   const fechaIni = document.getElementById('bloqueo-fecha-ini').value;
   const fechaFin = document.getElementById('bloqueo-fecha-fin').value || fechaIni;
@@ -336,16 +353,11 @@ async function guardarBloqueo() {
   if (!razon)    { showToast('⚠ Ingresa la razón del bloqueo'); return; }
   if (fechaFin < fechaIni) { showToast('⚠ La fecha final no puede ser menor a la inicial'); return; }
 
-  // Generar array de fechas entre ini y fin
   const fechas = [];
   const cur = new Date(fechaIni + 'T12:00:00');
   const fin = new Date(fechaFin + 'T12:00:00');
   while (cur <= fin) {
-    fechas.push({
-      fecha: cur.toISOString().split('T')[0],
-      razon,
-      tipo
-    });
+    fechas.push({ fecha: cur.toISOString().split('T')[0], razon, tipo });
     cur.setDate(cur.getDate() + 1);
   }
 
@@ -356,13 +368,11 @@ async function guardarBloqueo() {
   const dias = fechas.length;
   showToast(`🔒 ${dias} día${dias > 1 ? 's' : ''} bloqueado${dias > 1 ? 's' : ''}: ${razon}`);
 
-  // Limpiar campos
   document.getElementById('bloqueo-fecha-ini').value = '';
   document.getElementById('bloqueo-fecha-fin').value = '';
   document.getElementById('bloqueo-razon').value = '';
 
-  await cargarFechasBloqueadas();
-  await marcarDiasConCitas();
+  await cargarCitasSemana();
 }
 
 function verificarFechaBloqueada(fecha) {
@@ -370,25 +380,8 @@ function verificarFechaBloqueada(fecha) {
   return window._fechasBloqueadasData[fecha];
 }
 
-function abrirModalCita() {
-  // Verificar bloqueo solo si hay fecha seleccionada
-  if (fechaSeleccionada) {
-    const bloqueo = verificarFechaBloqueada(fechaSeleccionada);
-    if (bloqueo) {
-      const tipos = { vacaciones:'Vacaciones', cierre:'Cierre del consultorio', festivo:'Día festivo', otro:'Otro motivo' };
-      showToast(`⛔ No se pueden agendar citas — ${tipos[bloqueo.tipo] || bloqueo.tipo}: ${bloqueo.razon}`);
-      return;
-    }
-  }
-  // Pre-llenar fecha seleccionada
-  document.getElementById('cita-fecha').value = fechaSeleccionada || '';
-  checkFechaBloqueada(fechaSeleccionada || '');
-  cargarSelectsPacientesTratamientos();
-  openModal('nueva-cita');
-}
-
 function checkFechaBloqueada(fecha) {
-  const alerta = document.getElementById('alerta-fecha-bloqueada');
+  const alerta     = document.getElementById('alerta-fecha-bloqueada');
   const btnAgendar = document.querySelector('#modal-nueva-cita .btn-primary');
   if (!fecha) {
     if (alerta) alerta.style.display = 'none';
@@ -426,7 +419,7 @@ async function cargarFechasBloqueadasConfig() {
 
   tbody.innerHTML = data.map(f => `
     <tr>
-      <td>${new Date(f.fecha+'T12:00:00').toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td>${new Date(f.fecha + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
       <td><span class="badge badge-red" style="font-size:10px">${f.tipo}</span></td>
       <td style="font-size:12px">${f.razon}</td>
       <td><button class="tb-btn danger" style="padding:3px 8px;font-size:10px" onclick="eliminarBloqueo('${f.id}')">✕</button></td>
@@ -439,6 +432,5 @@ async function eliminarBloqueo(id) {
   if (error) { showToast('❌ Error: ' + error.message); return; }
   showToast('✓ Bloqueo eliminado');
   cargarFechasBloqueadasConfig();
-  await cargarFechasBloqueadas();
-  await marcarDiasConCitas();
+  await cargarCitasSemana();
 }
