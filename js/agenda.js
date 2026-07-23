@@ -4,8 +4,8 @@
 // ─────────────────────────────────────────
 
 // ── CONFIG DE LA CUADRÍCULA ──
-const HORA_INICIO = 7;   // 7:00 am
-const HORA_FIN    = 21;  // 9:00 pm
+const HORA_INICIO = 9;   // 9:00 am
+const HORA_FIN    = 19;  // 7:00 pm
 const ROW_H       = 52;  // px por hora
 
 // ── ESTADO ──
@@ -35,6 +35,58 @@ function diasSemanaArray() {
     d.setDate(d.getDate() + i);
     return d;
   });
+}
+
+// ── HORARIOS DE ATENCIÓN (configurados en Configuración → Horarios de Atención) ──
+function horaEnMinutos(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Devuelve los turnos activos (en minutos) del día de la semana que le corresponde a "fecha"
+function obtenerRangosParaFecha(fecha) {
+  const h = window.horarioAtencion || HORARIO_ATENCION_DEFAULT;
+  const d = new Date(fecha + 'T12:00:00');
+  const dow = d.getDay(); // 0=domingo ... 6=sábado
+  const grupo = dow === 0 ? h.dom : (dow === 6 ? h.sab : h.lv);
+  const rangos = [];
+  ['am', 'pm'].forEach(turno => {
+    const t = grupo[turno];
+    if (t && t.activo && t.ini && t.fin) rangos.push({ ini: t.ini, fin: t.fin });
+  });
+  return rangos;
+}
+
+// ¿La hora indicada cae dentro de algún turno activo de ese día?
+function estaDentroHorario(fecha, horaHHMM) {
+  const rangos = obtenerRangosParaFecha(fecha);
+  if (rangos.length === 0) return false;
+  const min = horaEnMinutos(horaHHMM);
+  return rangos.some(r => min >= horaEnMinutos(r.ini) && min < horaEnMinutos(r.fin));
+}
+
+// ¿La cita completa (inicio + duración) cabe dentro de un solo turno activo, sin salirse?
+function citaCaeDentroHorario(fecha, horaHHMM, duracionMin) {
+  const rangos = obtenerRangosParaFecha(fecha);
+  if (rangos.length === 0) return false;
+  const inicio = horaEnMinutos(horaHHMM);
+  const fin    = inicio + (parseInt(duracionMin) || 60);
+  return rangos.some(r => inicio >= horaEnMinutos(r.ini) && fin <= horaEnMinutos(r.fin));
+}
+
+// Calcula los tramos SIN servicio dentro de la ventana visible de la cuadrícula (para pintarlos en gris)
+function segmentosCerrados(rangos) {
+  const ordenados = [...rangos].sort((a, b) => horaEnMinutos(a.ini) - horaEnMinutos(b.ini));
+  const segmentos = [];
+  let cursor = HORA_INICIO * 60;
+  ordenados.forEach(r => {
+    const ini = horaEnMinutos(r.ini), fin = horaEnMinutos(r.fin);
+    if (ini > cursor) segmentos.push({ ini: cursor, fin: Math.min(ini, HORA_FIN * 60) });
+    cursor = Math.max(cursor, fin);
+  });
+  if (cursor < HORA_FIN * 60) segmentos.push({ ini: cursor, fin: HORA_FIN * 60 });
+  return segmentos.filter(s => s.fin > s.ini);
 }
 
 // ── AGENDA ACTIVA ──
@@ -179,6 +231,15 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
       ? `<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(231,76,60,.10),rgba(231,76,60,.10) 8px,rgba(231,76,60,.20) 8px,rgba(231,76,60,.20) 16px);display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;font-size:10px;color:#e74c3c;z-index:2" title="${bloqueo.razon}">🔒 ${bloqueo.razon}</div>`
       : '';
 
+    // Tramos fuera de los Horarios de Atención configurados (fuera de turno o día cerrado)
+    const rangosServicio = obtenerRangosParaFecha(fecha);
+    const overlaysCerrado = bloqueo ? '' : segmentosCerrados(rangosServicio).map(s => {
+      const top  = ((s.ini - HORA_INICIO * 60) / 60) * ROW_H;
+      const alto = ((s.fin - s.ini) / 60) * ROW_H;
+      if (alto <= 0) return '';
+      return `<div style="position:absolute;left:0;right:0;top:${top}px;height:${alto}px;background:repeating-linear-gradient(45deg,rgba(255,255,255,.015),rgba(255,255,255,.015) 8px,rgba(255,255,255,.04) 8px,rgba(255,255,255,.04) 16px)"></div>`;
+    }).join('');
+
     return `
       <div style="display:flex;flex-direction:column;min-width:0">
         <div style="height:${ROW_H}px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid rgba(201,168,108,.1);background:${esHoy ? 'rgba(201,168,108,.1)' : 'transparent'}">
@@ -187,6 +248,7 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
         </div>
         <div onclick="crearCitaEnSlot(event,'${fecha}')"
              style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(201,168,108,.1);cursor:${bloqueo ? 'not-allowed' : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(201,168,108,.07) 0, rgba(201,168,108,.07) 1px, transparent 1px, transparent ${ROW_H}px)">
+          ${overlaysCerrado}
           ${bloques}
           ${overlayBloqueo}
         </div>
@@ -218,9 +280,15 @@ function crearCitaEnSlot(ev, fecha) {
   totalMin = Math.max(HORA_INICIO * 60, Math.min(HORA_FIN * 60 - 15, totalMin));
   const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
   const mm = String(totalMin % 60).padStart(2, '0');
+  const horaStr = `${hh}:${mm}`;
+
+  if (!estaDentroHorario(fecha, horaStr)) {
+    showToast('⛔ Ese horario está fuera de tus Horarios de Atención (Configuración)');
+    return;
+  }
 
   document.getElementById('cita-fecha').value = fecha;
-  document.getElementById('cita-hora').value  = `${hh}:${mm}`;
+  document.getElementById('cita-hora').value  = horaStr;
   checkFechaBloqueada(fecha);
   cargarSelectsPacientesTratamientos();
   openModal('nueva-cita');
@@ -282,6 +350,11 @@ async function guardarCita() {
   const bloqueo = verificarFechaBloqueada(datos.fecha);
   if (bloqueo) {
     showToast(`⛔ Fecha bloqueada: ${bloqueo.razon}`);
+    return;
+  }
+
+  if (!citaCaeDentroHorario(datos.fecha, datos.hora, datos.duracion_min)) {
+    showToast('⛔ Ese horario está fuera de tus Horarios de Atención (revisa Configuración)');
     return;
   }
 
