@@ -7,6 +7,7 @@
 // ─── INIT ADMIN ───
 function initAdmin() {
   cargarConfigConsultorio();
+  cargarHorarioAtencion();
   initDashboard();
   showModule('dashboard', document.querySelector('.nav-item'));
 }
@@ -58,6 +59,73 @@ async function guardarConfigConsultorio() {
     correo: datos.correo, instagram: datos.instagram
   };
   showToast('✓ Datos guardados correctamente');
+}
+
+// ─── HORARIOS DE ATENCIÓN (usados por Agenda para bloquear horarios fuera de servicio) ───
+const HORARIO_ATENCION_DEFAULT = {
+  lv:  { am: { activo: true,  ini: '09:00', fin: '14:00' }, pm: { activo: true,  ini: '16:00', fin: '19:00' } },
+  sab: { am: { activo: true,  ini: '09:00', fin: '14:00' }, pm: { activo: false, ini: '',      fin: ''      } },
+  dom: { am: { activo: false, ini: '',      fin: ''      }, pm: { activo: false, ini: '',      fin: ''      } },
+  citaMinima: 30
+};
+window.horarioAtencion = JSON.parse(JSON.stringify(HORARIO_ATENCION_DEFAULT));
+
+async function cargarHorarioAtencion() {
+  try {
+    const { data, error } = await db.from('configuracion').select('horarios').eq('id', 1).single();
+    if (!error && data && data.horarios) {
+      window.horarioAtencion = data.horarios;
+    }
+  } catch (e) {
+    // Si la columna no existe todavía o falla la consulta, se usan los valores por defecto
+  }
+  pintarHorarioAtencionEnForm();
+}
+
+function pintarHorarioAtencionEnForm() {
+  const h = window.horarioAtencion;
+  ['lv', 'sab', 'dom'].forEach(grupo => {
+    ['am', 'pm'].forEach(turno => {
+      const t   = h[grupo][turno];
+      const act = document.getElementById(`hor-${grupo}-${turno}-activo`);
+      const ini = document.getElementById(`hor-${grupo}-${turno}-ini`);
+      const fin = document.getElementById(`hor-${grupo}-${turno}-fin`);
+      if (act) act.checked = !!t.activo;
+      if (ini) ini.value = t.ini || '';
+      if (fin) fin.value = t.fin || '';
+    });
+  });
+  const cm = document.getElementById('hor-cita-minima');
+  if (cm) cm.value = h.citaMinima || 30;
+}
+
+async function guardarHorarioAtencion() {
+  const leerTurno = (grupo, turno) => ({
+    activo: document.getElementById(`hor-${grupo}-${turno}-activo`)?.checked || false,
+    ini:    document.getElementById(`hor-${grupo}-${turno}-ini`)?.value || '',
+    fin:    document.getElementById(`hor-${grupo}-${turno}-fin`)?.value || '',
+  });
+
+  const nuevo = {
+    lv:  { am: leerTurno('lv', 'am'),  pm: leerTurno('lv', 'pm')  },
+    sab: { am: leerTurno('sab', 'am'), pm: leerTurno('sab', 'pm') },
+    dom: { am: leerTurno('dom', 'am'), pm: leerTurno('dom', 'pm') },
+    citaMinima: parseInt(document.getElementById('hor-cita-minima')?.value) || 30,
+  };
+
+  // Validar que cada turno activo tenga hora de inicio y fin, y que el fin sea mayor al inicio
+  for (const grupo of ['lv', 'sab', 'dom']) {
+    for (const turno of ['am', 'pm']) {
+      const t = nuevo[grupo][turno];
+      if (t.activo && (!t.ini || !t.fin)) { showToast('⚠ Falta hora de inicio o fin en un turno activo'); return; }
+      if (t.activo && t.fin <= t.ini)     { showToast('⚠ La hora de fin debe ser mayor a la de inicio'); return; }
+    }
+  }
+
+  const { error } = await db.from('configuracion').upsert([{ id: 1, horarios: nuevo }]);
+  if (error) { showToast('❌ Error al guardar horarios: ' + error.message); return; }
+  window.horarioAtencion = nuevo;
+  showToast('✓ Horarios de atención actualizados');
 }
 
 // Bloque de contacto que se inserta en las Notas de Venta (Pagos, Paquetes & Visitas, Créditos)
@@ -114,7 +182,7 @@ function showModule(id,el){
   if(id==='caja') initCaja();
   if(id==='gastos') initGastos();
   if(id==='reportes') initReportes();
-  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); cargarEliminados(); cargarConfigConsultorio(); }
+  if(id==='config') { cargarFechasBloqueadasConfig(); cargarUsuarios(); cargarEliminados(); cargarConfigConsultorio(); cargarHorarioAtencion(); }
   
 }
 

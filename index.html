@@ -781,13 +781,66 @@
           </div>
           <div class="config-card">
             <div class="config-title">Horarios de Atención</div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <div class="config-row"><label>Lunes — Viernes</label><input class="config-input" value="09:00 — 19:00"></div>
-              <div class="config-row"><label>Sábado</label><input class="config-input" value="09:00 — 14:00"></div>
-              <div class="config-row"><label>Domingo</label><input class="config-input" value="Cerrado"></div>
-              <div class="config-row"><label>Cita mínima (min)</label><input class="config-input" value="30" style="width:80px"></div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+
+              <div>
+                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Lunes — Viernes</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <input type="checkbox" id="hor-lv-am-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Matutino</label>
+                  <input type="time" id="hor-lv-am-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-lv-am-fin" class="config-input" style="width:110px">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="hor-lv-pm-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Vespertino</label>
+                  <input type="time" id="hor-lv-pm-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-lv-pm-fin" class="config-input" style="width:110px">
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Sábado</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <input type="checkbox" id="hor-sab-am-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Matutino</label>
+                  <input type="time" id="hor-sab-am-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-sab-am-fin" class="config-input" style="width:110px">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="hor-sab-pm-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Vespertino</label>
+                  <input type="time" id="hor-sab-pm-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-sab-pm-fin" class="config-input" style="width:110px">
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Domingo</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <input type="checkbox" id="hor-dom-am-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Matutino</label>
+                  <input type="time" id="hor-dom-am-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-dom-am-fin" class="config-input" style="width:110px">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="checkbox" id="hor-dom-pm-activo" style="accent-color:var(--gold)">
+                  <label style="font-size:12px;width:70px">Vespertino</label>
+                  <input type="time" id="hor-dom-pm-ini" class="config-input" style="width:110px">
+                  <span style="opacity:.4">—</span>
+                  <input type="time" id="hor-dom-pm-fin" class="config-input" style="width:110px">
+                </div>
+                <div style="font-size:10px;opacity:.35;margin-top:4px">Deja ambas casillas sin marcar para "Cerrado"</div>
+              </div>
+
+              <div class="config-row"><label>Cita mínima (min)</label><input id="hor-cita-minima" class="config-input" value="30" style="width:80px" type="number"></div>
             </div>
-            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Horarios actualizados')">Guardar</button>
+            <button class="btn-primary" style="margin-top:16px" onclick="guardarHorarioAtencion()">Guardar</button>
           </div>
           <div class="config-card">
             <div class="config-title">Notificaciones Automáticas</div>

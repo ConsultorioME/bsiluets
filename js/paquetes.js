@@ -134,8 +134,9 @@ async function verDetallePaq(id) {
         <td style="color:${v.monto_cobrado > 0 ? 'var(--success)' : 'var(--info)'}">
           ${v.monto_cobrado > 0 ? '$' + parseFloat(v.monto_cobrado).toLocaleString() : '$0 — Nota de visita'}
         </td>
+        <td><button class="tb-btn" style="padding:4px 10px;font-size:10px;color:#e74c3c" onclick="eliminarVisita('${v.id}','${p.id}',${v.numero_sesion})">🗑</button></td>
       </tr>`).join('')
-    : '<tr><td colspan="4" style="opacity:.3;text-align:center;padding:12px">Sin visitas registradas</td></tr>';
+    : '<tr><td colspan="5" style="opacity:.3;text-align:center;padding:12px">Sin visitas registradas</td></tr>';
 
   document.getElementById('det-content').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px">
@@ -161,10 +162,45 @@ async function verDetallePaq(id) {
         <span><div class="dot-s" style="border:1px solid var(--gold)"></div>Próxima</span>
       </div>
     </div>
-    <table><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Monto</th></tr>${histRows}</table>`;
+    <table><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Monto</th><th>Acción</th></tr>${histRows}</table>`;
 
   document.getElementById('detalle-paquete').style.display = 'block';
   document.getElementById('detalle-paquete').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── ELIMINAR UNA SESIÓN/VISITA (con recálculo automático de saldo) ──
+async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
+  const ok = confirm(
+    `¿Seguro que quieres ELIMINAR la Sesión ${numeroSesion}?\n\n` +
+    `Esta acción no se puede deshacer. Si esa sesión tenía un pago registrado, ` +
+    `el saldo del paquete se recalculará automáticamente.`
+  );
+  if (!ok) return;
+
+  const { error: errDel } = await db.from('visitas').delete().eq('id', visitaId);
+  if (errDel) { showToast('❌ Error al eliminar la sesión: ' + errDel.message); return; }
+
+  // Recalcular pagado y sesion_actual a partir de las visitas que quedan (fuente de verdad),
+  // en vez de solo restar a mano — así nunca queda descuadrado el saldo.
+  const { data: restantes, error: errSel } = await db
+    .from('visitas')
+    .select('numero_sesion, monto_cobrado')
+    .eq('paquete_id', paqueteId);
+
+  if (errSel) { showToast('❌ Sesión eliminada, pero no se pudo recalcular el saldo'); return; }
+
+  const nuevoPagado = (restantes || []).reduce((sum, v) => sum + (parseFloat(v.monto_cobrado) || 0), 0);
+  const nuevaSesionActual = (restantes || []).reduce((max, v) => Math.max(max, v.numero_sesion), 0);
+
+  const { error: errUpd } = await db.from('paquetes').update({
+    pagado: nuevoPagado,
+    sesion_actual: nuevaSesionActual,
+  }).eq('id', paqueteId);
+  if (errUpd) { showToast('❌ Error al actualizar el saldo del paquete'); return; }
+
+  showToast('✓ Sesión eliminada — saldo recalculado');
+  await verDetallePaq(paqueteId);
+  await cargarPaquetes();
 }
 
 // ── GUARDAR PAQUETE ──

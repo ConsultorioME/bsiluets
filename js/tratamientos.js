@@ -75,7 +75,7 @@ async function guardarTratamiento() {
     
   };
   if (!datos.nombre) { showToast('⚠ El nombre es obligatorio'); return; }
-  if (!datos.precio)  { showToast('⚠ El precio es obligatorio'); return; }
+  if (datos.precio < 0) { showToast('⚠ El precio no puede ser negativo'); return; }
   let error;
   if (id) {
     ({ error } = await db.from('tratamientos').update(datos).eq('id', id));
