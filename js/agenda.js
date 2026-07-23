@@ -287,6 +287,7 @@ function crearCitaEnSlot(ev, fecha) {
     return;
   }
 
+  limpiarFormCita();
   document.getElementById('cita-fecha').value = fecha;
   document.getElementById('cita-hora').value  = horaStr;
   checkFechaBloqueada(fecha);
@@ -296,6 +297,7 @@ function crearCitaEnSlot(ev, fecha) {
 
 // ── ABRIR MODAL DESDE EL BOTÓN "+ NUEVA CITA" ──
 function abrirModalCita() {
+  limpiarFormCita();
   const hoy   = fmtFecha(new Date());
   const dias  = diasSemanaArray().map(fmtFecha);
   const fechaDefault = dias.includes(hoy) ? hoy : dias[0];
@@ -393,7 +395,22 @@ async function editarCita(id) {
   document.getElementById('cita-notas').value       = c.notas || '';
 
   document.querySelector('#modal-nueva-cita .modal-title').textContent = 'Editar Cita';
+  const btnEliminar = document.getElementById('btn-eliminar-cita');
+  if (btnEliminar) btnEliminar.style.display = 'inline-block';
   openModal('nueva-cita');
+}
+
+// ── ELIMINAR CITA DESDE EL MODAL DE EDICIÓN ──
+async function eliminarCitaDesdeModal() {
+  const id = document.getElementById('cita-id').value;
+  if (!id) return;
+  if (!confirm('¿Seguro que quieres eliminar esta cita? Esta acción no se puede deshacer.')) return;
+  const { error } = await db.from('agenda').delete().eq('id', id);
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+  closeModal('nueva-cita');
+  limpiarFormCita();
+  showToast('✓ Cita eliminada');
+  await cargarCitasSemana();
 }
 
 // ── ELIMINAR CITA ──
@@ -413,6 +430,8 @@ function limpiarFormCita() {
   document.getElementById('cita-duracion').value = '60';
   const titulo = document.querySelector('#modal-nueva-cita .modal-title');
   if (titulo) titulo.textContent = 'Nueva Cita';
+  const btnEliminar = document.getElementById('btn-eliminar-cita');
+  if (btnEliminar) btnEliminar.style.display = 'none';
 }
 
 // ── FECHAS BLOQUEADAS ──
