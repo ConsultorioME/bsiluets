@@ -216,21 +216,32 @@
           <button class="agenda-tab" onclick="selAgenda('Versa',this)">✨ Versa</button>
           <button class="agenda-tab" onclick="selAgenda('Depilación',this)">🪒 Depilación</button>
         </div>
-        <div class="agenda-week-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <button class="cal-nav" onclick="semanaNav(-1)">‹</button>
-            <span class="cal-month" id="semana-lbl">Semana</span>
-            <button class="cal-nav" onclick="semanaNav(1)">›</button>
-            <button class="tb-btn" onclick="irHoySemana()">Hoy</button>
-            <span id="resumen-semana" style="font-size:12px;margin-left:6px"></span>
+        <div class="agenda-admin">
+          <div>
+            <div class="mini-cal">
+              <div class="cal-header">
+                <button class="cal-nav" onclick="calNav(-1)">‹</button>
+                <span class="cal-month" id="cal-month-lbl">Junio 2025</span>
+                <button class="cal-nav" onclick="calNav(1)">›</button>
+              </div>
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+              <button class="tb-btn" style="width:100%" onclick="abrirModalCita()">+ Nueva Cita</button>
+              
+            </div>
           </div>
-          <button class="tb-btn" onclick="abrirModalCita()">+ Nueva Cita</button>
-        </div>
-        <div style="overflow-x:auto;background:var(--charcoal);border:1px solid rgba(201,168,108,.1)">
-          <div id="semana-grid"></div>
-        </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--cream);opacity:.4">
-          🟡 Pendiente &nbsp;·&nbsp; 🟢 Confirmada &nbsp;·&nbsp; 🔵 En sala &nbsp;·&nbsp; ⚪ Completada &nbsp;·&nbsp; 🔴 Cancelada &nbsp;·&nbsp; Clic en un espacio vacío para agendar
+          <div class="agenda-slots">
+            <div class="slot-header" id="slot-header">Citas — Lunes 2 de junio</div>
+            <div id="slot-list">
+              <div class="slot-item"><span class="slot-time">09:00</span><div class="slot-info"><div class="slot-patient">Ana Rodríguez</div><div class="slot-treatment">Cavitación — Sesión 3/10</div></div><span class="badge badge-green" style="align-self:center">Confirmada</span><div class="slot-actions"><button class="icon-btn" title="Ver">👁</button><button class="icon-btn" title="Editar">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">10:30</span><div class="slot-info"><div class="slot-patient">Karla Mendoza</div><div class="slot-treatment">Botox Labios + Consulta</div></div><span class="badge badge-green" style="align-self:center">Confirmada</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">11:00</span><div class="slot-info"><div class="slot-patient">Diana López</div><div class="slot-treatment">Facial Antiedad</div></div><span class="badge badge-gold" style="align-self:center">Pendiente</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">13:00</span><div class="slot-info"><div class="slot-patient">María Torres</div><div class="slot-treatment">Body Sculpting — Sesión 7/10</div></div><span class="badge badge-gold" style="align-self:center">Pendiente</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">15:30</span><div class="slot-info"><div class="slot-patient">Claudia Vega</div><div class="slot-treatment">Suplemento Colágeno + Consulta</div></div><span class="badge badge-blue" style="align-self:center">En sala</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+              <div class="slot-item"><span class="slot-time">17:00</span><div class="slot-info"><div class="slot-patient">Sofía Ruiz</div><div class="slot-treatment">Relleno Dérmico</div></div><span class="badge badge-gray" style="align-self:center">Sin confirmar</span><div class="slot-actions"><button class="icon-btn">👁</button><button class="icon-btn">✏</button></div></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -501,12 +512,12 @@
                       <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Método</label>
                       <div style="display:flex;flex-direction:column;gap:6px" id="vis-metodos-container">
                         <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
-                          <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
-                            <option value="efectivo">💵 Efectivo</option>
-                            <option value="tarjeta">💳 Tarjeta</option>
-                            <option value="transferencia">🏦 Transferencia</option>
+                          <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta">💳 Tarjeta</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
                           </select>
-                          <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+                          <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
                         </div>
                       </div>
                       <button type="button" class="tb-btn" style="margin-top:6px;font-size:11px;width:100%" onclick="agregarMetodoVis()">+ Agregar método</button>
@@ -772,75 +783,22 @@
         <div class="config-grid">
           <div class="config-card">
             <div class="config-title">Datos del Consultorio</div>
-            <div class="fg" style="margin-bottom:10px"><label>Nombre del consultorio</label><input id="cfg-nombre" class="config-input" style="width:100%" value="B·Siluets Consultorio Médico Estético"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Dirección</label><input id="cfg-direccion" class="config-input" style="width:100%" value="Tepic, Nayarit, México"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Teléfono</label><input id="cfg-telefono" class="config-input" style="width:100%" value="311 000 0000"></div>
-            <div class="fg" style="margin-bottom:10px"><label>Correo</label><input id="cfg-correo" class="config-input" style="width:100%" value="contacto@bsiluets.mx"></div>
-            <div class="fg"><label>Instagram</label><input id="cfg-instagram" class="config-input" style="width:100%" value="@bsiluets"></div>
-            <button class="btn-primary" style="margin-top:16px" onclick="guardarConfigConsultorio()">Guardar</button>
+            <div class="fg" style="margin-bottom:10px"><label>Nombre del consultorio</label><input class="config-input" style="width:100%" value="B·Siluets Consultorio Médico Estético"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Dirección</label><input class="config-input" style="width:100%" value="Tepic, Nayarit, México"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Teléfono</label><input class="config-input" style="width:100%" value="311 000 0000"></div>
+            <div class="fg" style="margin-bottom:10px"><label>Correo</label><input class="config-input" style="width:100%" value="contacto@bsiluets.mx"></div>
+            <div class="fg"><label>Instagram</label><input class="config-input" style="width:100%" value="@bsiluets"></div>
+            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Datos guardados correctamente')">Guardar</button>
           </div>
           <div class="config-card">
             <div class="config-title">Horarios de Atención</div>
-            <div style="display:flex;flex-direction:column;gap:16px">
-
-              <div>
-                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Lunes — Viernes</div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <input type="checkbox" id="hor-lv-am-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Matutino</label>
-                  <input type="time" id="hor-lv-am-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-lv-am-fin" class="config-input" style="width:110px">
-                </div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input type="checkbox" id="hor-lv-pm-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Vespertino</label>
-                  <input type="time" id="hor-lv-pm-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-lv-pm-fin" class="config-input" style="width:110px">
-                </div>
-              </div>
-
-              <div>
-                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Sábado</div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <input type="checkbox" id="hor-sab-am-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Matutino</label>
-                  <input type="time" id="hor-sab-am-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-sab-am-fin" class="config-input" style="width:110px">
-                </div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input type="checkbox" id="hor-sab-pm-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Vespertino</label>
-                  <input type="time" id="hor-sab-pm-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-sab-pm-fin" class="config-input" style="width:110px">
-                </div>
-              </div>
-
-              <div>
-                <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);opacity:.7;margin-bottom:8px">Domingo</div>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <input type="checkbox" id="hor-dom-am-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Matutino</label>
-                  <input type="time" id="hor-dom-am-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-dom-am-fin" class="config-input" style="width:110px">
-                </div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <input type="checkbox" id="hor-dom-pm-activo" style="accent-color:var(--gold)">
-                  <label style="font-size:12px;width:70px">Vespertino</label>
-                  <input type="time" id="hor-dom-pm-ini" class="config-input" style="width:110px">
-                  <span style="opacity:.4">—</span>
-                  <input type="time" id="hor-dom-pm-fin" class="config-input" style="width:110px">
-                </div>
-                <div style="font-size:10px;opacity:.35;margin-top:4px">Deja ambas casillas sin marcar para "Cerrado"</div>
-              </div>
-
-              <div class="config-row"><label>Cita mínima (min)</label><input id="hor-cita-minima" class="config-input" value="30" style="width:80px" type="number"></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="config-row"><label>Lunes — Viernes</label><input class="config-input" value="09:00 — 19:00"></div>
+              <div class="config-row"><label>Sábado</label><input class="config-input" value="09:00 — 14:00"></div>
+              <div class="config-row"><label>Domingo</label><input class="config-input" value="Cerrado"></div>
+              <div class="config-row"><label>Cita mínima (min)</label><input class="config-input" value="30" style="width:80px"></div>
             </div>
-            <button class="btn-primary" style="margin-top:16px" onclick="guardarHorarioAtencion()">Guardar</button>
+            <button class="btn-primary" style="margin-top:16px" onclick="showToast('Horarios actualizados')">Guardar</button>
           </div>
           <div class="config-card">
             <div class="config-title">Notificaciones Automáticas</div>
@@ -917,7 +875,7 @@
         <div class="card">
           <div class="card-title">Todos los créditos activos</div>
           <table>
-            <tr><th>Paciente</th><th>Adeudo paquetes</th><th>Cobros crédito</th><th>Total adeudo</th><th>Antigüedad</th><th></th></tr>
+            <tr><th>Paciente</th><th>Adeudo paquetes</th><th>Cobros crédito</th><th>Abonos registrados</th><th>Total adeudo</th><th>Antigüedad</th><th></th></tr>
             <tbody id="tabla-creditos-body"></tbody>
           </table>
         </div>
@@ -996,7 +954,6 @@
     </div>
     <div class="form-row full"><div class="fg"><label>Notas</label><textarea id="cita-notas" placeholder="Indicaciones especiales..."></textarea></div></div>
     <div class="modal-actions">
-      <button class="btn-outline" id="btn-eliminar-cita" style="display:none;border-color:#e74c3c;color:#e74c3c;margin-right:auto" onclick="eliminarCitaDesdeModal()">🗑 Eliminar Cita</button>
       <button class="btn-outline" onclick="closeModal('nueva-cita');limpiarFormCita()">Cancelar</button>
       <button class="btn-primary" onclick="guardarCita()">Agendar</button>
     </div>
