@@ -254,7 +254,7 @@ async function registrarCobro() {
     <div class="nota-preview">
       <div class="nota-header">
         <div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
-        ${notaContactoHTML()}
+        <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
       </div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
@@ -267,7 +267,7 @@ async function registrarCobro() {
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
       </div>
-      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
   openModal('nota-impr');
@@ -399,7 +399,7 @@ async function reimprimirCobro(id) {
     <div class="nota-preview">
       <div class="nota-header">
         <div class="nota-logo"><img src="data:image/png;base64,${LOGO_B64}" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
-        ${notaContactoHTML()}
+        <div class="nota-sub-hdr">Consultorio Médico Estético · Durango</div>
       </div>
       <div class="nota-folio">Folio: <strong>${p.folio || '—'}</strong> &nbsp;|&nbsp; ${p.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
@@ -413,7 +413,7 @@ async function reimprimirCobro(id) {
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
       </div>
-      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
+      <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
   openModal('nota-impr');
@@ -463,7 +463,7 @@ function obtenerMetodosPago() {
 
 // ── ELIMINAR COBRO ──
 async function eliminarCobro(id) {
-  if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación.')) return;
+  if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación y se recalculará el saldo del paciente si era un cobro en crédito.')) return;
 
   const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
   const { error } = await db.from('pagos').update({
@@ -474,7 +474,14 @@ async function eliminarCobro(id) {
 
   if (error) { showToast('❌ Error: ' + error.message); return; }
 
-  showToast('✓ Cobro eliminado');
+  showToast('✓ Cobro eliminado — contabilidad recalculada');
+
+  // Refrescar el propio módulo de Pagos
   await cargarUltimosCobros();
-  if (typeof initCaja === 'function') initCaja();
+
+  // Recalcular en todos los módulos que dependen de "pagos" para créditos/caja/dashboard
+  if (typeof cargarCreditos === 'function')  await cargarCreditos();
+  if (typeof cargarEliminados === 'function') await cargarEliminados();
+  if (typeof initCaja === 'function')        initCaja();
+  if (typeof initDashboard === 'function')   initDashboard();
 }
