@@ -46,22 +46,45 @@ async function cargarCreditos() {
     if (dias > pacientesMap[id].diasDesde) pacientesMap[id].diasDesde = dias;
   });
 
+  // 3. Abonos registrados — se consultan TODOS (no solo los de pacientes con deuda
+  //    actual), porque el historial de abonos de un cliente es un saldo GLOBAL y
+  //    nunca debe desaparecer solo porque el cobro/paquete específico al que se
+  //    aplicó ya no esté pendiente (liquidado, corregido o eliminado por duplicado).
+  const { data: abonosTodos } = await db
+    .from('abonos')
+    .select('paciente_id, monto, pacientes(id, nombre, apellidos)');
+
+  (abonosTodos || []).forEach(a => {
+    const id     = a.paciente_id;
+    const nombre = a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos}` : '—';
+    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, paquetes: [], cobros: [], diasDesde: 0 };
+    pacientesMap[id].abonosTotal = (pacientesMap[id].abonosTotal || 0) + parseFloat(a.monto || 0);
+  });
+
   const pacientes = Object.values(pacientesMap);
 
-  // KPIs
-  const totalCartera = pacientes.reduce((s, p) => {
+  // KPIs — se calculan SOLO sobre quienes tienen deuda pendiente real,
+  // aunque la tabla de abajo siga mostrando a todos (incluyendo saldo $0 con
+  // historial de abonos) para que nadie "desaparezca" de la vista.
+  const pacientesConDeuda = pacientes.filter(p => {
+    const saldoPaq    = p.paquetes.reduce((a, pk) => a + (pk.precio_total - pk.pagado), 0);
+    const saldoCobros = p.cobros.reduce((a, c) => a + parseFloat(c.total), 0);
+    return (saldoPaq + saldoCobros) > 0;
+  });
+
+  const totalCartera = pacientesConDeuda.reduce((s, p) => {
     const saldoPaq   = p.paquetes.reduce((a, pk) => a + (pk.precio_total - pk.pagado), 0);
     const saldoCobros = p.cobros.reduce((a, c) => a + parseFloat(c.total), 0);
     return s + saldoPaq + saldoCobros;
   }, 0);
 
-  const vencidos30 = pacientes.filter(p => p.diasDesde > 30).length;
+  const vencidos30 = pacientesConDeuda.filter(p => p.diasDesde > 30).length;
 
-  document.getElementById('kpi-cred-clientes').textContent  = pacientes.length;
+  document.getElementById('kpi-cred-clientes').textContent  = pacientesConDeuda.length;
   document.getElementById('kpi-cred-cartera').textContent   = '$' + totalCartera.toLocaleString();
   document.getElementById('kpi-cred-vencidos').textContent  = vencidos30;
 
-  renderAlertasCredito(pacientes);
+  renderAlertasCredito(pacientesConDeuda);
   renderTablaCreditos(pacientes);
 }
 
@@ -114,7 +137,7 @@ function renderTablaCreditos(pacientes) {
   if (!tbody) return;
 
   if (pacientes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;opacity:.3;padding:20px">Sin adeudos pendientes</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;opacity:.3;padding:20px">Sin adeudos pendientes</td></tr>`; // 7 columnas: Paciente, Adeudo paquetes, Cobros crédito, Abonos registrados, Total adeudo, Antigüedad, Acción
     return;
   }
 
@@ -122,6 +145,7 @@ function renderTablaCreditos(pacientes) {
     const saldoPaq    = p.paquetes.reduce((a, pk) => a + (pk.precio_total - pk.pagado), 0);
     const saldoCobros = p.cobros.reduce((a, c) => a + parseFloat(c.total), 0);
     const totalSaldo  = saldoPaq + saldoCobros;
+    const abonosTotal = p.abonosTotal || 0;
     const dias        = p.diasDesde;
 
     let badge = dias > 30 ? `<span class="badge badge-red">${dias} días</span>`
@@ -135,8 +159,11 @@ function renderTablaCreditos(pacientes) {
         title="${p.cobros && p.cobros.length > 0 ? p.cobros.map(c => (c.concepto||'Cobro') + ': $' + parseFloat(c.total).toLocaleString()).join(' | ') : '—'}">
         ${saldoCobros > 0 ? '$'+saldoCobros.toLocaleString() : '—'}
       </td>
-      <td style="color:#e74c3c;font-weight:600">$${totalSaldo.toLocaleString()}</td>
-      <td>${badge}</td>
+      <td style="color:#27AE60;font-size:12px" title="Suma histórica de abonos registrados para este paciente (puede incluir pagos a cobros o paquetes ya liquidados)">
+        ${abonosTotal > 0 ? '$'+abonosTotal.toLocaleString() : '—'}
+      </td>
+      <td style="color:${totalSaldo > 0 ? '#e74c3c' : '#27AE60'};font-weight:600">${totalSaldo > 0 ? '$'+totalSaldo.toLocaleString() : 'Sin adeudo'}</td>
+      <td>${totalSaldo > 0 ? badge : '—'}</td>
       <td><button class="tb-btn" style="padding:4px 10px;font-size:10px"
         onclick="abrirDetalleCredito('${p.id}','${p.nombre}')">
         Ver / Abonar</button></td>
@@ -212,7 +239,7 @@ async function abrirDetalleCredito(pacienteId, nombre) {
     .order('fecha', { ascending: false });
 
   if (abonos && abonos.length > 0) {
-    html += `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#27AE60;opacity:.8;margin-bottom:6px;margin-top:10px">Abonos registrados</div>`;
+    html += `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#27AE60;opacity:.8;margin-bottom:6px;margin-top:10px" title="Historial completo de abonos del paciente; puede incluir pagos aplicados a cobros o paquetes ya liquidados, no solo al saldo pendiente actual">Abonos registrados (historial)</div>`;
     html += abonos.map(a => `
       <div class="abono-item">
         <span class="abono-fecha">${a.fecha || '—'}</span>
@@ -253,9 +280,10 @@ async function guardarAbonoReal() {
       await db.from('pagos').update({ total: nuevoTotal }).eq('id', cobro.id);
     }
 
-    // Registrar en historial de abonos
+    // Registrar en historial de abonos (vinculado al cobro específico para trazabilidad)
     await db.from('abonos').insert([{
       paciente_id: creditoActual.pacienteId,
+      pago_id:     cobro.id,
       monto:       montoAplicar,
       metodo_pago: metodo,
       fecha:       fecha,
