@@ -235,8 +235,14 @@ function openAbonoModal(nombre,saldo){
   openModal('abono');
 }
 function calcNuevoSaldo(){
+  // Usa el saldo real del crédito abierto (creditoActual.totalSaldo, definido en
+  // creditos.js al abrir el modal). abonoSaldoActual queda solo como respaldo
+  // para el flujo demo openAbonoModal(), que ya no se usa en el módulo real.
+  const saldoBase = (typeof creditoActual !== 'undefined' && creditoActual && typeof creditoActual.totalSaldo === 'number')
+    ? creditoActual.totalSaldo
+    : abonoSaldoActual;
   const abono=parseFloat(document.getElementById('abono-monto').value)||0;
-  const nuevo=Math.max(0,abonoSaldoActual-abono);
+  const nuevo=Math.max(0,saldoBase-abono);
   document.getElementById('abono-saldo-nuevo').textContent='$'+nuevo.toLocaleString();
   document.getElementById('abono-saldo-nuevo').style.color=nuevo===0?'var(--success)':'var(--gold)';
 }
