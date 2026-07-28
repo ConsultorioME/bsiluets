@@ -11,6 +11,15 @@ async function initCaja() {
   await cargarCaja(fecha);
 }
 
+// Etiqueta de tipo de abono, derivada de las columnas reales de la fila
+// (paquete_id / pago_id), no del texto libre de "referencia" que el
+// usuario puede sobreescribir al capturar el abono.
+function tipoAbono(a) {
+  if (a.paquete_id) return { label: 'Paquete', badge: 'badge-gold' };
+  if (a.pago_id)    return { label: 'Crédito', badge: 'badge-blue' };
+  return { label: '—', badge: 'badge-gray' };
+}
+
 async function cargarCaja(fecha) {
   // 1. Cobros del día (módulo Pagos) — excluir eliminados
   const { data: pagos } = await db
@@ -28,7 +37,10 @@ async function cargarCaja(fecha) {
     .gt('monto_cobrado', 0)
     .order('created_at', { ascending: true });
 
-  // 3. Abonos del día (módulo Créditos)
+  // 3. Abonos del día (módulo Créditos) — incluye tanto "Abono a paquete"
+  //    (paquete_id) como "Abono a cobro en crédito" (pago_id); ambos viven
+  //    en la misma tabla `abonos`, por lo que se traen paquete_id/pago_id
+  //    para poder distinguir y etiquetar cada tipo en la UI y el PDF.
   const { data: abonos } = await db
     .from('abonos')
     .select('*, pacientes(nombre, apellidos)')
@@ -136,18 +148,20 @@ async function cargarCaja(fecha) {
     }
   }
 
-  // ── Tabla Abonos ──
+  // ── Tabla Abonos (Paquetes + Créditos) ──
   const tbAbonos = document.getElementById('caja-tabla-abonos');
   if (tbAbonos) {
     if (!abonos || abonos.length === 0) {
-      tbAbonos.innerHTML = `<tr><td colspan="4" style="text-align:center;opacity:.3;padding:12px">Sin abonos a adeudos este día</td></tr>`;
+      tbAbonos.innerHTML = `<tr><td colspan="5" style="text-align:center;opacity:.3;padding:12px">Sin abonos este día</td></tr>`;
     } else {
       const metBadge = { efectivo:'badge-green', tarjeta:'badge-blue', transferencia:'badge-gray' };
       tbAbonos.innerHTML = abonos.map(a => {
         const nombre = a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos.charAt(0)}.` : '—';
         const badge  = metBadge[a.metodo_pago?.toLowerCase()] || 'badge-gray';
+        const tipo   = tipoAbono(a);
         return `<tr>
           <td>${nombre}</td>
+          <td><span class="badge ${tipo.badge}" style="font-size:10px">${tipo.label}</span></td>
           <td style="font-size:12px;opacity:.7">${a.referencia || 'Abono'}</td>
           <td><span class="badge ${badge}" style="font-size:10px">${a.metodo_pago || '—'}</span></td>
           <td style="color:#27AE60;font-weight:500">$${parseFloat(a.monto).toLocaleString()}</td>
@@ -193,6 +207,25 @@ async function cargarCaja(fecha) {
   window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad };
 }
 
+// Carga una imagen (misma ruta que usan las notas de venta) y la convierte
+// a base64 para poder insertarla en el PDF con jsPDF, devolviendo también
+// su ancho/alto reales para poder mantener la proporción correcta.
+function cargarImagenParaPDF(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve({ base64: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => reject(new Error('No se pudo cargar la imagen: ' + url));
+    img.src = url;
+  });
+}
+
 // ── DESCARGAR PDF ──
 async function descargarCajaPDF() {
   const d = window._cajaData;
@@ -201,23 +234,41 @@ async function descargarCajaPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  // Intentar cargar el logo real; si falla (sin conexión, ruta no encontrada,
+  // etc.) se usa el texto "B·Siluets" como respaldo para no romper el PDF.
+  let logo = null;
+  try {
+    logo = await cargarImagenParaPDF('assets/img/logo-bsiluets.png');
+  } catch (e) {
+    console.warn('No se pudo cargar el logo para el PDF, se usará texto:', e);
+  }
+
   // Header
-  doc.setFontSize(18);
-  doc.setTextColor(201, 168, 108);
-  doc.text('B·Siluets', 105, 20, { align: 'center' });
+  let headerY;
+  if (logo) {
+    const logoAnchoMM = 32;
+    const logoAltoMM  = logoAnchoMM * (logo.height / logo.width);
+    doc.addImage(logo.base64, 'PNG', 105 - logoAnchoMM / 2, 10, logoAnchoMM, logoAltoMM);
+    headerY = 10 + logoAltoMM + 6;
+  } else {
+    doc.setFontSize(18);
+    doc.setTextColor(201, 168, 108);
+    doc.text('B·Siluets', 105, 20, { align: 'center' });
+    headerY = 27;
+  }
   doc.setFontSize(11);
   doc.setTextColor(100);
-  doc.text('Consultorio Médico Estético · Durango', 105, 27, { align: 'center' });
+  doc.text('Consultorio Médico Estético · Durango', 105, headerY, { align: 'center' });
   doc.setFontSize(13);
   doc.setTextColor(50);
-  doc.text(`Corte de Caja — ${d.fecha}`, 105, 36, { align: 'center' });
+  doc.text(`Corte de Caja — ${d.fecha}`, 105, headerY + 9, { align: 'center' });
 
   // Línea separadora
   doc.setDrawColor(201, 168, 108);
-  doc.line(15, 40, 195, 40);
+  doc.line(15, headerY + 13, 195, headerY + 13);
 
   // KPIs
-  let y = 48;
+  let y = headerY + 21;
   doc.setFontSize(10);
   doc.setTextColor(80);
   const kpis = [
@@ -245,13 +296,20 @@ async function descargarCajaPDF() {
   y += 6;
   doc.setFontSize(9);
   doc.setTextColor(60);
-  (d.pagos || []).forEach(p => {
-    const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
-    doc.text(`${nombre} — ${p.concepto || '—'}`, 15, y);
-    doc.text(`$${parseFloat(p.total).toLocaleString()}`, 195, y, { align: 'right' });
+  if (!d.pagos || d.pagos.length === 0) {
+    doc.setTextColor(150);
+    doc.text('Sin cobros este día', 15, y);
+    doc.setTextColor(60);
     y += 6;
-    if (y > 270) { doc.addPage(); y = 20; }
-  });
+  } else {
+    d.pagos.forEach(p => {
+      const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
+      doc.text(`${nombre} — ${p.concepto || '—'}`, 15, y);
+      doc.text(`$${parseFloat(p.total).toLocaleString()}`, 195, y, { align: 'right' });
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+  }
 
   y += 4;
   // Visitas
@@ -261,13 +319,45 @@ async function descargarCajaPDF() {
   y += 6;
   doc.setFontSize(9);
   doc.setTextColor(60);
-  (d.visitas || []).forEach(v => {
-    const nombre = v.pacientes ? `${v.pacientes.nombre} ${v.pacientes.apellidos.charAt(0)}.` : '—';
-    doc.text(`${nombre} — Ses. ${v.numero_sesion}`, 15, y);
-    doc.text(`$${parseFloat(v.monto_cobrado).toLocaleString()}`, 195, y, { align: 'right' });
+  if (!d.visitas || d.visitas.length === 0) {
+    doc.setTextColor(150);
+    doc.text('Sin abonos de sesiones este día', 15, y);
+    doc.setTextColor(60);
     y += 6;
-    if (y > 270) { doc.addPage(); y = 20; }
-  });
+  } else {
+    d.visitas.forEach(v => {
+      const nombre = v.pacientes ? `${v.pacientes.nombre} ${v.pacientes.apellidos.charAt(0)}.` : '—';
+      doc.text(`${nombre} — Ses. ${v.numero_sesion}`, 15, y);
+      doc.text(`$${parseFloat(v.monto_cobrado).toLocaleString()}`, 195, y, { align: 'right' });
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+  }
+
+  y += 4;
+  // Abonos (Paquetes + Créditos)
+  doc.setFontSize(11);
+  doc.setTextColor(201, 168, 108);
+  doc.text('Abonos a paquetes y créditos', 15, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(60);
+  if (!d.abonos || d.abonos.length === 0) {
+    doc.setTextColor(150);
+    doc.text('Sin abonos este día', 15, y);
+    doc.setTextColor(60);
+    y += 6;
+  } else {
+    d.abonos.forEach(a => {
+      const nombre = a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos.charAt(0)}.` : '—';
+      const tipo   = tipoAbono(a).label;
+      doc.text(`${nombre} — ${tipo}: ${a.referencia || 'Abono'} (${a.metodo_pago || '—'})`, 15, y);
+      doc.text(`$${parseFloat(a.monto).toLocaleString()}`, 195, y, { align: 'right' });
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+  }
+  if (y > 270) { doc.addPage(); y = 20; }
 
   y += 4;
   // Gastos
