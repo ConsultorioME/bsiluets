@@ -1139,29 +1139,48 @@
 
 <!-- MODAL: ABONO -->
 <div class="modal-overlay" id="modal-abono">
-  <div class="modal" style="max-width:460px">
+  <div class="modal" style="max-width:480px">
     <button class="modal-close" onclick="closeModal('abono')">×</button>
-    <div class="modal-title" id="abono-paciente-title">Registrar Abono</div>
-    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,108,.1)">Crédito activo</div>
+    <div class="modal-title" id="abono-paciente-title">Adeudo consolidado</div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,108,.1)">Crédito activo</div>
+
     <div style="background:rgba(201,168,108,.06);border:1px solid rgba(201,168,108,.1);padding:14px;margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7;margin-bottom:6px"><span>Saldo pendiente</span><span id="abono-saldo-actual" style="color:#e74c3c;font-weight:500"></span></div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7"><span>Después del abono</span><span id="abono-saldo-nuevo" style="color:var(--gold)">$—</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7"><span>Saldo total del paciente</span><span id="abono-saldo-actual" style="color:#e74c3c;font-weight:500"></span></div>
     </div>
-    <div class="form-row">
-      <div class="fg"><label>Monto del abono</label><input type="number" id="abono-monto" placeholder="0.00" oninput="calcNuevoSaldo()"></div>
-      <div class="fg"><label>Método</label><select id="abono-metodo"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+
+    <!-- VISTA 1: elegir a qué paquete o cobro se va a abonar -->
+    <div id="abono-vista-lista">
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);opacity:.55;margin-bottom:10px">Selecciona a qué abonar</div>
+      <div id="lista-conceptos-abono"></div>
     </div>
-    <div class="fg"><label>Fecha</label><input type="date" id="abono-fecha"></div>
-    <div class="fg"><label>Referencia (opcional)</label><input type="text" placeholder="Nota o referencia..."></div>
+
+    <!-- VISTA 2: formulario de abono, ya dirigido a UN solo concepto -->
+    <div id="abono-vista-form" style="display:none">
+      <button class="tb-btn" style="padding:4px 10px;font-size:10px;margin-bottom:12px" onclick="volverListaConceptos()">‹ Volver a conceptos</button>
+      <div style="background:rgba(41,128,185,.08);border:1px solid rgba(41,128,185,.2);padding:12px;margin-bottom:16px">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#2980B9;opacity:.8;margin-bottom:4px" id="abono-concepto-tipo">Concepto</div>
+        <div style="font-weight:600;margin-bottom:8px" id="abono-concepto-nombre">—</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7;margin-bottom:4px"><span>Saldo de este concepto</span><span id="abono-concepto-saldo" style="color:#e74c3c;font-weight:500"></span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.7"><span>Después del abono</span><span id="abono-saldo-nuevo" style="color:var(--gold)">$—</span></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label>Monto del abono</label><input type="number" id="abono-monto" placeholder="0.00" oninput="calcNuevoSaldo()"></div>
+        <div class="fg"><label>Método</label><select id="abono-metodo"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+      </div>
+      <div class="fg"><label>Fecha</label><input type="date" id="abono-fecha"></div>
+      <div class="fg"><label>Referencia (opcional)</label><input type="text" id="abono-referencia" placeholder="Nota o referencia..."></div>
+    </div>
+
     <div style="margin-top:16px">
       <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);opacity:.55;margin-bottom:10px">Historial de abonos</div>
-      <div id="historial-abonos">
-        <div class="abono-item"><span class="abono-fecha">01/Mar/25</span><span class="abono-desc">Abono inicial</span><span class="abono-monto">+$4,000</span><span class="badge badge-green" style="font-size:10px">Efectivo</span></div>
-        <div class="abono-item"><span class="abono-fecha">15/Mar/25</span><span class="abono-desc">Abono 2</span><span class="abono-monto">+$2,000</span><span class="badge badge-blue" style="font-size:10px">Tarjeta</span></div>
-      </div>
+      <div id="historial-abonos"></div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('abono')">Cancelar</button>
+
+    <div class="modal-actions" id="abono-actions-lista">
+      <button class="btn-outline" onclick="closeModal('abono')">Cerrar</button>
+    </div>
+    <div class="modal-actions" id="abono-actions-form" style="display:none">
+      <button class="btn-outline" onclick="volverListaConceptos()">Cancelar</button>
       <button class="btn-primary" onclick="guardarAbonoReal()">Registrar Abono</button>
     </div>
   </div>

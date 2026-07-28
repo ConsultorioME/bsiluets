@@ -224,34 +224,11 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ─── SCROLL ───
 function scrollTo(sel){document.querySelector(sel)?.scrollIntoView({behavior:'smooth'})}
 
-// ─── ABONO (créditos demo) ───
-let abonoSaldoActual=0;
-function openAbonoModal(nombre,saldo){
-  abonoSaldoActual=saldo;
-  document.getElementById('abono-paciente-title').textContent='Registrar Abono — '+nombre;
-  document.getElementById('abono-saldo-actual').textContent='$'+saldo.toLocaleString();
-  document.getElementById('abono-saldo-nuevo').textContent='$'+saldo.toLocaleString();
-  document.getElementById('abono-monto').value='';
-  openModal('abono');
-}
-function calcNuevoSaldo(){
-  // Usa el saldo real del crédito abierto (creditoActual.totalSaldo, definido en
-  // creditos.js al abrir el modal). abonoSaldoActual queda solo como respaldo
-  // para el flujo demo openAbonoModal(), que ya no se usa en el módulo real.
-  const saldoBase = (typeof creditoActual !== 'undefined' && creditoActual && typeof creditoActual.totalSaldo === 'number')
-    ? creditoActual.totalSaldo
-    : abonoSaldoActual;
-  const abono=parseFloat(document.getElementById('abono-monto').value)||0;
-  const nuevo=Math.max(0,saldoBase-abono);
-  document.getElementById('abono-saldo-nuevo').textContent='$'+nuevo.toLocaleString();
-  document.getElementById('abono-saldo-nuevo').style.color=nuevo===0?'var(--success)':'var(--gold)';
-}
-function guardarAbono(){
-  const monto=parseFloat(document.getElementById('abono-monto').value)||0;
-  if(monto<=0){showToast('⚠ Ingresa un monto válido');return;}
-  closeModal('abono');
-  showToast('✓ Abono de $'+monto.toLocaleString()+' registrado');
-}
+// Nota: la lógica de "Abono" (calcNuevoSaldo, guardarAbonoReal, seleccionar
+// concepto, etc.) del módulo real de Créditos vive en creditos.js. El código
+// demo que existía aquí (openAbonoModal/abonoSaldoActual/guardarAbono, nunca
+// invocado desde la UI real) se eliminó para no duplicar/confundir con
+// calcNuevoSaldo() de creditos.js.
 
 // ─── SUB-TABS ───
 function showModTab(id, el) {
