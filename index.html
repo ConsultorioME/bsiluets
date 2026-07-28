@@ -502,9 +502,9 @@
                       <div style="display:flex;flex-direction:column;gap:6px" id="vis-metodos-container">
                         <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
                           <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta">💳 Tarjeta</option>
-                            <option value="Transferencia">🏦 Transferencia</option>
+                            <option value="efectivo">💵 Efectivo</option>
+                            <option value="tarjeta">💳 Tarjeta</option>
+                            <option value="transferencia">🏦 Transferencia</option>
                           </select>
                           <input type="number" class="vis-metodo-monto" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
                         </div>
@@ -623,9 +623,9 @@
         </div>
       </div>
       <div class="card" style="margin-top:20px">
-        <div class="card-title">Abonos a paquetes y créditos</div>
+        <div class="card-title">Abonos a adeudos (Créditos)</div>
         <table>
-          <tr><th>Paciente</th><th>Tipo</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
+          <tr><th>Paciente</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
           <tbody id="caja-tabla-abonos"></tbody>
         </table>
       </div>
