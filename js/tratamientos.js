@@ -43,8 +43,8 @@ async function cargarTratamientos(busqueda = '') {
     if (t.sesiones_paquete_10) paquetes.push('10 sesiones');
     const paqText = paquetes.length > 0 ? `Paquete ${paquetes.join(' / ')}` : 'Sesión individual';
     const paqBadge = paquetes.length > 0
-      ? `<span style="font-size:10px;background:rgba(201,168,108,.15);color:var(--gold);padding:3px 8px;border-radius:2px;letter-spacing:.08em">📦 Con paquete</span>`
-      : `<span style="font-size:10px;background:rgba(255,255,255,.06);color:var(--cream);opacity:.5;padding:3px 8px;border-radius:2px;letter-spacing:.08em">✦ Sesión individual</span>`;
+      ? `<span style="font-size:10px;background:rgba(184,147,90,.28);color:var(--gold);padding:3px 8px;border-radius:2px;letter-spacing:.08em">📦 Con paquete</span>`
+      : `<span style="font-size:10px;background:rgba(15,23,42,.06);color:var(--cream);opacity:.5;padding:3px 8px;border-radius:2px;letter-spacing:.08em">✦ Sesión individual</span>`;
     return `
       <div class="treat-card" style="position:relative" onclick="void(0)">
         <div style="position:absolute;top:12px;right:12px;display:flex;gap:6px">

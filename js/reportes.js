@@ -150,7 +150,7 @@ function renderMetodosPago(pagos, totalIngresos) {
   });
 
   const total = totalIngresos || 1;
-  const colores = { efectivo:'var(--gold)', tarjeta:'rgba(201,168,108,.5)', credito:'rgba(201,168,108,.25)', transferencia:'rgba(41,128,185,.5)' };
+  const colores = { efectivo:'var(--gold)', tarjeta:'rgba(184,147,90,.55)', credito:'rgba(184,147,90,.38)', transferencia:'rgba(41,128,185,.5)' };
 
   cont.innerHTML = Object.entries(metodos).map(([m, v]) => {
     const pct  = Math.round((v / total) * 100);
@@ -161,7 +161,7 @@ function renderMetodosPago(pagos, totalIngresos) {
           <span style="text-transform:capitalize">${m}</span>
           <span>${pct}% — $${v.toLocaleString()}</span>
         </div>
-        <div style="height:6px;background:rgba(255,255,255,.06);border-radius:2px">
+        <div style="height:6px;background:rgba(15,23,42,.06);border-radius:2px">
           <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:.6s"></div>
         </div>
       </div>`;
