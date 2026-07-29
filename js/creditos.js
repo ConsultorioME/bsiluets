@@ -420,11 +420,11 @@ async function guardarAbonoReal() {
         </div>
         <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
         <div class="nota-row"><span>Paciente</span><strong>${creditoActual.nombre}</strong></div>
-        <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+        <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
         <div class="nota-row"><span>Tipo</span><span>${tipo === 'paquete' ? 'Paquete' : 'Cobro en crédito'}</span></div>
         <div class="nota-row"><span>Concepto</span><span>${nombre}</span></div>
         <div class="nota-row"><span>Referencia</span><span>${ref || '—'}</span></div>
-        <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+        <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
         <div class="nota-row total-row">
           <span>ABONO APLICADO</span>
           <span><strong>$${monto.toLocaleString()}</strong></span>

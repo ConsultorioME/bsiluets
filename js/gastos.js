@@ -140,7 +140,7 @@ function renderGastosPorCat(porCat, total) {
           <span style="color:var(--cream);opacity:.7">${cat}</span>
           <span style="color:${colores[i % colores.length]};font-weight:500">$${monto.toLocaleString()} (${pct}%)</span>
         </div>
-        <div style="background:rgba(255,255,255,.06);height:6px;border-radius:3px">
+        <div style="background:rgba(15,23,42,.06);height:6px;border-radius:3px">
           <div style="width:${pct}%;background:${colores[i % colores.length]};height:6px;border-radius:3px;transition:width .4s"></div>
         </div>
       </div>`;

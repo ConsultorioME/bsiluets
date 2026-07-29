@@ -95,12 +95,12 @@ function agregarTratPago() {
   div.style.cssText = 'display:grid;grid-template-columns:1fr 130px 32px;gap:8px;margin-bottom:8px;align-items:center';
   div.innerHTML = `
     <select class="trat-select" onchange="autoFillTratPrecio(this,${id})"
-      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
       <option value="0">Seleccionar tratamiento...</option>
       ${opciones.replace(/<option[^>]*>[^<]*Seleccionar[^<]*<\/option>/g,'')}
     </select>
     <input type="number" class="trat-precio" placeholder="Precio $" step="0.01" oninput="recalcPago()"
-      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
     <button type="button" onclick="eliminarTratPago(${id})"
       style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:14px">✕</button>`;
   cont.appendChild(div);
@@ -131,14 +131,14 @@ function agregarSuplPago() {
   div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 110px 32px;gap:8px;margin-bottom:8px;align-items:center';
   div.innerHTML = `
     <select class="supl-select" onchange="autoFillSuplPrecio(this,${id})"
-      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
       <option value="0">Seleccionar producto...</option>
       ${opciones.replace(/<option[^>]*>[^<]*Seleccionar[^<]*<\/option>/g,'')}
     </select>
     <input type="number" class="supl-qty" value="1" step="0.25" min="0.25" oninput="recalcPago()" placeholder="Cant."
-      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
     <input type="number" class="supl-precio" placeholder="Precio $" step="0.01" oninput="recalcPago()"
-      style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
     <button type="button" onclick="eliminarSuplPago(${id})"
       style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:14px">✕</button>`;
   cont.appendChild(div);
@@ -258,9 +258,9 @@ async function registrarCobro() {
       </div>
       <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
-      <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+      <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
-      <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+      <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${total.toLocaleString()}</strong></span></div>
       <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoPago.includes('|') ? metodoPago.split('|').map(m => { const [met,mon] = m.split(':'); return `${met} $${parseFloat(mon).toLocaleString()}`; }).join(' + ') : (metodoLabel[metodoPago] || metodoPago)}</span></div>
       <div class="nota-firma">
@@ -356,12 +356,12 @@ function limpiarFormPago() {
     const div = document.createElement('div');
     div.style.cssText = 'display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center';
     div.innerHTML = `
-      <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
         <option value="efectivo">💵 Efectivo</option>
         <option value="tarjeta">💳 Tarjeta</option>
         <option value="transferencia">🏦 Transferencia</option>
       </select>
-      <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">`;
+      <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">`;
     cont.appendChild(div);
   }
   const tpEl = document.getElementById('tot-pagado');
@@ -403,9 +403,9 @@ async function reimprimirCobro(id) {
       </div>
       <div class="nota-folio">Folio: <strong>${p.folio || '—'}</strong> &nbsp;|&nbsp; ${p.fecha}</div>
       <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
-      <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+      <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
-      <div style="border-top:1px solid rgba(201,168,108,.15);margin:10px 0"></div>
+      <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${parseFloat(p.total).toLocaleString()}</strong></span></div>
       <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>
       <div class="nota-row" style="font-size:12px"><span>Tipo de cobro</span><span style="color:${p.liquidado === false ? '#e74c3c' : '#27AE60'}">${p.liquidado === false ? '📋 A crédito' : '✅ Contado'}</span></div>
@@ -425,12 +425,12 @@ function agregarMetodoPago() {
   const div  = document.createElement('div');
   div.style.cssText = 'display:grid;grid-template-columns:1fr 140px 32px;gap:8px;align-items:center';
   div.innerHTML = `
-    <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+    <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
       <option value="efectivo">💵 Efectivo</option>
       <option value="tarjeta">💳 Tarjeta</option>
       <option value="transferencia">🏦 Transferencia</option>
     </select>
-    <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
     <button type="button" onclick="this.parentElement.remove();recalcMetodos()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
   cont.appendChild(div);
   recalcMetodos();

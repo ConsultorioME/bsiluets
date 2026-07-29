@@ -142,15 +142,15 @@ async function verDetallePaq(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px">
       <div style="background:var(--dark);padding:14px;text-align:center">
         <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream);opacity:.3;margin-bottom:5px">Total</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--gold)">$${parseFloat(p.precio_total).toLocaleString()}</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;color:var(--gold)">$${parseFloat(p.precio_total).toLocaleString()}</div>
       </div>
       <div style="background:var(--dark);padding:14px;text-align:center">
         <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream);opacity:.3;margin-bottom:5px">Pagado</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:var(--success)">$${parseFloat(p.pagado).toLocaleString()}</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;color:var(--success)">$${parseFloat(p.pagado).toLocaleString()}</div>
       </div>
       <div style="background:var(--dark);padding:14px;text-align:center">
         <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream);opacity:.3;margin-bottom:5px">Saldo</div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:24px;color:${saldo > 0 ? '#e74c3c' : '#27AE60'}">$${saldo.toLocaleString()}</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:24px;color:${saldo > 0 ? '#e74c3c' : '#27AE60'}">$${saldo.toLocaleString()}</div>
       </div>
     </div>
     <div style="margin-bottom:16px">
@@ -343,7 +343,7 @@ async function cargarPaqueteVis() {
     selectorHTML = `
       <div class="fg" style="margin-bottom:12px">
         <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Seleccionar paquete</label>
-        <select id="vis-select-paquete" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="seleccionarPaqueteVis()">
+        <select id="vis-select-paquete" style="width:100%;background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:9px 13px;font-family:'Inter',sans-serif;font-size:13px;color:var(--cream);outline:none" onchange="seleccionarPaqueteVis()">
           ${activos.map(p => `<option value="${p.id}">${p.tratamientos?.nombre || '—'} — Ses. ${p.sesion_actual+1}/${p.total_sesiones} · Saldo $${(p.precio_total-p.pagado).toLocaleString()}</option>`).join('')}
         </select>
       </div>`;
@@ -646,12 +646,12 @@ function agregarMetodoVis() {
   const div  = document.createElement('div');
   div.style.cssText = 'display:grid;grid-template-columns:1fr 110px 32px;gap:6px;align-items:center';
   div.innerHTML = `
-    <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+    <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
       <option value="efectivo">💵 Efectivo</option>
       <option value="tarjeta">💳 Tarjeta</option>
       <option value="transferencia">🏦 Transferencia</option>
     </select>
-    <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
     <button type="button" onclick="this.parentElement.remove();actualizarNotaVis()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
   cont.appendChild(div);
 }

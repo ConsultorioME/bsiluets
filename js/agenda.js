@@ -221,7 +221,7 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
       const horaTxt = c.hora?.substring(0, 5) || '';
       return `<div onclick="event.stopPropagation();editarCita('${c.id}')"
                 title="${horaTxt} — ${nombre} — ${trat}"
-                style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:pointer;font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Jost',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
+                style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:pointer;font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Inter',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
                 <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${horaTxt} ${nombre}</strong>
                 <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">${trat}</span>
               </div>`;
@@ -237,17 +237,17 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
       const top  = ((s.ini - HORA_INICIO * 60) / 60) * ROW_H;
       const alto = ((s.fin - s.ini) / 60) * ROW_H;
       if (alto <= 0) return '';
-      return `<div style="position:absolute;left:0;right:0;top:${top}px;height:${alto}px;background:repeating-linear-gradient(45deg,rgba(255,255,255,.015),rgba(255,255,255,.015) 8px,rgba(255,255,255,.04) 8px,rgba(255,255,255,.04) 16px)"></div>`;
+      return `<div style="position:absolute;left:0;right:0;top:${top}px;height:${alto}px;background:repeating-linear-gradient(45deg,rgba(15,23,42,.025),rgba(15,23,42,.025) 8px,rgba(15,23,42,.06) 8px,rgba(15,23,42,.06) 16px)"></div>`;
     }).join('');
 
     return `
       <div style="display:flex;flex-direction:column;min-width:0">
-        <div style="height:${ROW_H}px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid rgba(201,168,108,.1);background:${esHoy ? 'rgba(201,168,108,.1)' : 'transparent'}">
+        <div style="height:${ROW_H}px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid rgba(184,147,90,.18);background:${esHoy ? 'rgba(184,147,90,.18)' : 'transparent'}">
           <div style="font-size:10px;letter-spacing:.1em;color:var(--gold);opacity:.6">${nombresDia[d.getDay()]}</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:19px;color:${esHoy ? 'var(--gold)' : 'var(--cream)'}">${d.getDate()}</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;color:${esHoy ? 'var(--gold)' : 'var(--cream)'}">${d.getDate()}</div>
         </div>
         <div onclick="crearCitaEnSlot(event,'${fecha}')"
-             style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(201,168,108,.1);cursor:${bloqueo ? 'not-allowed' : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(201,168,108,.07) 0, rgba(201,168,108,.07) 1px, transparent 1px, transparent ${ROW_H}px)">
+             style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(184,147,90,.18);cursor:${bloqueo ? 'not-allowed' : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(184,147,90,.13) 0, rgba(184,147,90,.13) 1px, transparent 1px, transparent ${ROW_H}px)">
           ${overlaysCerrado}
           ${bloques}
           ${overlayBloqueo}
