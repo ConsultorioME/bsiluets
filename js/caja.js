@@ -85,7 +85,12 @@ async function cargarCaja(fecha) {
     }
   });
 
-  const totalIngresos = Object.values(totales).reduce((s, v) => s + v, 0);
+  // "Crédito" NO es dinero que entró en caja ese día — es solo una deuda
+  // registrada. Se excluye de Total Ingresos / Utilidad Neta para no
+  // duplicar el monto cuando después se liquide con un abono (que sí se
+  // suma en efectivo/tarjeta/transferencia). Se sigue mostrando aparte
+  // como referencia informativa de cuánto se generó en crédito ese día.
+  const totalIngresos = totales.efectivo + totales.tarjeta + totales.transferencia;
   const totalGastos   = (gastos || []).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
   const utilidad      = totalIngresos - totalGastos;
 
