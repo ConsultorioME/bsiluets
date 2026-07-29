@@ -5,6 +5,7 @@
 
 let metodoSeleccionado = 'efectivo';
 let tratCounter = 0;
+let medicCounter = 0;
 let suplCounter = 0;
 
 // ── INICIALIZAR PAGOS ──
@@ -13,6 +14,7 @@ async function initPagos() {
   document.getElementById('pago-fecha').value = hoy;
   await cargarSelectPacientesPagos();
   await cargarSelectTratamientosPagos();
+  await cargarSelectMedicamentosPagos();
   await cargarSelectSuplementosPagos();
   await cargarUltimosCobros();
 }
@@ -41,8 +43,19 @@ async function cargarSelectTratamientosPagos() {
   }
 }
 
+async function cargarSelectMedicamentosPagos() {
+  const { data } = await db.from('inventario').select('id,nombre,precio_venta,unidad').eq('activo',true).eq('categoria','Medicamento').order('nombre');
+  const sel = document.getElementById('pago-medicamento');
+  if (sel && data) {
+    sel.innerHTML = '<option value="0">Seleccionar...</option>' +
+      data.filter(p => p.precio_venta > 0).map(p =>
+        `<option value="${p.precio_venta}" data-id="${p.id}" data-nombre="${p.nombre}" data-unidad="${p.unidad}">${p.nombre} ($${parseFloat(p.precio_venta).toLocaleString()}/${p.unidad})</option>`
+      ).join('');
+  }
+}
+
 async function cargarSelectSuplementosPagos() {
-  const { data } = await db.from('inventario').select('id,nombre,precio_venta,unidad').eq('activo',true).order('nombre');
+  const { data } = await db.from('inventario').select('id,nombre,precio_venta,unidad').eq('activo',true).in('categoria',['Suplemento','Proteína']).order('nombre');
   const sel = document.getElementById('pago-suplemento');
   if (sel && data) {
     sel.innerHTML = '<option value="0">Seleccionar...</option>' +
@@ -59,6 +72,13 @@ function recalcPago() {
     totalTrats += parseFloat(item.querySelector('.trat-precio')?.value || 0);
   });
 
+  let totalMedics = 0;
+  document.querySelectorAll('.medic-item').forEach(item => {
+    const precio = parseFloat(item.querySelector('.medic-precio')?.value || 0);
+    const qty    = parseFloat(item.querySelector('.medic-qty')?.value || 1);
+    totalMedics += precio * qty;
+  });
+
   let totalSupls = 0;
   document.querySelectorAll('.supl-item').forEach(item => {
     const precio = parseFloat(item.querySelector('.supl-precio')?.value || 0);
@@ -66,12 +86,15 @@ function recalcPago() {
     totalSupls += precio * qty;
   });
 
-  const total = totalTrats + totalSupls;
+  const total = totalTrats + totalMedics + totalSupls;
   const stEl = document.getElementById('subtotal-trats');
+  const smEl = document.getElementById('subtotal-medics');
   const ssEl = document.getElementById('subtotal-supls');
   if (stEl) stEl.textContent = '$' + totalTrats.toLocaleString();
+  if (smEl) smEl.textContent = '$' + totalMedics.toLocaleString();
   if (ssEl) ssEl.textContent = '$' + totalSupls.toLocaleString();
   document.getElementById('tot-trat').textContent  = '$' + totalTrats.toLocaleString();
+  document.getElementById('tot-medic').textContent = '$' + totalMedics.toLocaleString();
   document.getElementById('tot-supl').textContent  = '$' + totalSupls.toLocaleString();
   document.getElementById('tot-total').textContent = '$' + total.toLocaleString();
 }
@@ -119,7 +142,45 @@ function eliminarTratPago(id) {
   recalcPago();
 }
 
-// ── AGREGAR SUPLEMENTO / MEDICAMENTO / PROTEÍNA ──
+// ── AGREGAR MEDICAMENTO ──
+function agregarMedicPago() {
+  const cont = document.getElementById('medics-container');
+  const id   = ++medicCounter;
+  const opciones = document.getElementById('pago-medicamento')?.innerHTML || '';
+
+  const div = document.createElement('div');
+  div.className = 'medic-item';
+  div.id = `medic-item-${id}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 110px 32px;gap:8px;margin-bottom:8px;align-items:center';
+  div.innerHTML = `
+    <select class="medic-select" onchange="autoFillMedicPrecio(this,${id})"
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+      <option value="0">Seleccionar medicamento...</option>
+      ${opciones.replace(/<option[^>]*>[^<]*Seleccionar[^<]*<\/option>/g,'')}
+    </select>
+    <input type="number" class="medic-qty" value="1" step="0.25" min="0.25" oninput="recalcPago()" placeholder="Cant."
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none;width:100%">
+    <input type="number" class="medic-precio" placeholder="Precio $" step="0.01" oninput="recalcPago()"
+      style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+    <button type="button" onclick="eliminarMedicPago(${id})"
+      style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:14px">✕</button>`;
+  cont.appendChild(div);
+  recalcPago();
+}
+
+function autoFillMedicPrecio(sel, id) {
+  const precio   = sel.options[sel.selectedIndex]?.value || 0;
+  const precioEl = document.getElementById(`medic-item-${id}`)?.querySelector('.medic-precio');
+  if (precioEl && parseFloat(precio) > 0) precioEl.value = precio;
+  recalcPago();
+}
+
+function eliminarMedicPago(id) {
+  document.getElementById(`medic-item-${id}`)?.remove();
+  recalcPago();
+}
+
+// ── AGREGAR SUPLEMENTO / PROTEÍNA ──
 function agregarSuplPago() {
   const cont = document.getElementById('supls-container');
   const id   = ++suplCounter;
@@ -178,7 +239,21 @@ async function registrarCobro() {
     }
   });
 
-  // Recopilar suplementos
+  // Recopilar medicamentos
+  const medicItems = [];
+  document.querySelectorAll('.medic-item').forEach(item => {
+    const sel    = item.querySelector('.medic-select');
+    const qty    = parseFloat(item.querySelector('.medic-qty')?.value || 1);
+    const precio = parseFloat(item.querySelector('.medic-precio')?.value || 0);
+    const nombre = sel?.options[sel.selectedIndex]?.dataset?.nombre ||
+                   sel?.options[sel.selectedIndex]?.text?.replace(/\s*\(.*\)/, '').trim() || '';
+    const id     = sel?.options[sel.selectedIndex]?.dataset?.id || null;
+    if (precio > 0 && nombre && !nombre.includes('Seleccionar')) {
+      medicItems.push({ nombre, qty, precio, id, monto: precio * qty });
+    }
+  });
+
+  // Recopilar suplementos / proteínas
   const suplItems = [];
   document.querySelectorAll('.supl-item').forEach(item => {
     const sel    = item.querySelector('.supl-select');
@@ -192,38 +267,40 @@ async function registrarCobro() {
     }
   });
 
-  if (tratItems.length === 0 && suplItems.length === 0) {
-    showToast('⚠ Agrega al menos un tratamiento o suplemento');
+  if (tratItems.length === 0 && medicItems.length === 0 && suplItems.length === 0) {
+    showToast('⚠ Agrega al menos un tratamiento, medicamento o suplemento');
     return;
   }
 
-  const totalTrats = tratItems.reduce((s, t) => s + t.precio, 0);
-  const totalSupls = suplItems.reduce((s, s2) => s + s2.monto, 0);
-  const total      = totalTrats + totalSupls;
-  const concepto   = [...tratItems.map(t => t.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
+  const totalTrats  = tratItems.reduce((s, t) => s + t.precio, 0);
+  const totalMedics = medicItems.reduce((s, m) => s + m.monto, 0);
+  const totalSupls  = suplItems.reduce((s, s2) => s + s2.monto, 0);
+  const total      = totalTrats + totalMedics + totalSupls;
+  const concepto   = [...tratItems.map(t => t.nombre), ...medicItems.map(m => m.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
   const metodoPago  = obtenerMetodosPago();
   const tipoCobro   = document.querySelector('input[name="tipo-cobro"]:checked')?.value || 'contado';
   const esCredito   = tipoCobro === 'credito';
 
   const datos = {
-    paciente_id:       pacienteId,
-    concepto:          concepto,
-    monto_consulta:    0,
-    monto_tratamiento: totalTrats,
-    monto_suplementos: totalSupls,
-    total:             total,
-    metodo_pago:       esCredito ? 'credito' : metodoPago,
-    liquidado:         !esCredito,
-    fecha:             fecha,
-    folio:             folio,
+    paciente_id:        pacienteId,
+    concepto:           concepto,
+    monto_consulta:     0,
+    monto_tratamiento:  totalTrats,
+    monto_medicamentos: totalMedics,
+    monto_suplementos:  totalSupls,
+    total:              total,
+    metodo_pago:        esCredito ? 'credito' : metodoPago,
+    liquidado:          !esCredito,
+    fecha:              fecha,
+    folio:              folio,
   };
 
   const { error } = await db.from('pagos').insert([datos]);
   if (error) { showToast('❌ Error: ' + error.message); return; }
 
-  // Descontar stock de cada suplemento
-  for (const s of suplItems) {
+  // Descontar stock de cada medicamento y suplemento/proteína
+  for (const s of [...medicItems, ...suplItems]) {
     if (s.id && s.qty > 0) {
       const { data: prod } = await db.from('inventario').select('stock').eq('id', s.id).single();
       if (prod) {
@@ -246,6 +323,7 @@ async function registrarCobro() {
   const nombrePac = selPac.options[selPac.selectedIndex]?.text || '—';
   const detalles  = [
     ...tratItems.map(t => ({ concepto: t.nombre, monto: t.precio })),
+    ...medicItems.map(m => ({ concepto: `${m.nombre} x${m.qty}`, monto: m.monto })),
     ...suplItems.map(s => ({ concepto: `${s.nombre} x${s.qty}`, monto: s.monto }))
   ];
   const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito' };
@@ -332,20 +410,26 @@ function limpiarFormPago() {
   const notasEl = document.getElementById('pago-notas');
   if (notasEl) notasEl.value = '';
 
-  const tratsEl = document.getElementById('trats-container');
-  const suplsEl = document.getElementById('supls-container');
-  if (tratsEl) tratsEl.innerHTML = '';
-  if (suplsEl) suplsEl.innerHTML = '';
+  const tratsEl  = document.getElementById('trats-container');
+  const medicsEl = document.getElementById('medics-container');
+  const suplsEl  = document.getElementById('supls-container');
+  if (tratsEl)  tratsEl.innerHTML  = '';
+  if (medicsEl) medicsEl.innerHTML = '';
+  if (suplsEl)  suplsEl.innerHTML  = '';
 
   const stEl = document.getElementById('subtotal-trats');
+  const smEl = document.getElementById('subtotal-medics');
   const ssEl = document.getElementById('subtotal-supls');
   if (stEl) stEl.textContent = '$0';
+  if (smEl) smEl.textContent = '$0';
   if (ssEl) ssEl.textContent = '$0';
 
-  tratCounter = 0;
-  suplCounter = 0;
+  tratCounter  = 0;
+  medicCounter = 0;
+  suplCounter  = 0;
 
   document.getElementById('tot-trat').textContent  = '$0';
+  document.getElementById('tot-medic').textContent = '$0';
   document.getElementById('tot-supl').textContent  = '$0';
   document.getElementById('tot-total').textContent = '$0';
 
@@ -389,9 +473,10 @@ async function reimprimirCobro(id) {
 
   const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito' };
   const detalles = [];
-  if (p.monto_consulta > 0)    detalles.push({ concepto: 'Consulta', monto: p.monto_consulta });
-  if (p.monto_tratamiento > 0) detalles.push({ concepto: 'Tratamiento', monto: p.monto_tratamiento });
-  if (p.monto_suplementos > 0) detalles.push({ concepto: 'Suplementos', monto: p.monto_suplementos });
+  if (p.monto_consulta > 0)     detalles.push({ concepto: 'Consulta', monto: p.monto_consulta });
+  if (p.monto_tratamiento > 0)  detalles.push({ concepto: 'Tratamiento', monto: p.monto_tratamiento });
+  if (p.monto_medicamentos > 0) detalles.push({ concepto: 'Medicamentos', monto: p.monto_medicamentos });
+  if (p.monto_suplementos > 0)  detalles.push({ concepto: 'Suplementos / Proteínas', monto: p.monto_suplementos });
 
   const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
 

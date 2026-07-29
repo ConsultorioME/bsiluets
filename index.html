@@ -359,7 +359,19 @@
               </div>
               <div class="accion-servicio">
                 <div class="as-header">
-                  <span class="as-title">Suplementos / Medicamentos / Proteínas</span>
+                  <span class="as-title">Medicamentos</span>
+                  <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarMedicPago()">+ Agregar</button>
+                </div>
+                <div id="medic-block">
+                  <div id="medics-container"></div>
+                  <div style="text-align:right;margin-top:6px;font-size:13px;color:var(--gold)">
+                    Subtotal medicamentos: <strong id="subtotal-medics">$0</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="accion-servicio">
+                <div class="as-header">
+                  <span class="as-title">Suplementos / Proteínas</span>
                   <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarSuplPago()">+ Agregar</button>
                 </div>
                 <div id="supl-block">
@@ -371,7 +383,8 @@
               </div>
               <div class="pago-total">
                 <div class="pago-total-row"><span>Tratamientos</span><span id="tot-trat">$0</span></div>
-                <div class="pago-total-row"><span>Suplementos / Med. / Prot.</span><span id="tot-supl">$0</span></div>
+                <div class="pago-total-row"><span>Medicamentos</span><span id="tot-medic">$0</span></div>
+                <div class="pago-total-row"><span>Suplementos / Proteínas</span><span id="tot-supl">$0</span></div>
                 <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
               </div>
               <div style="margin-top:16px">
@@ -1273,6 +1286,7 @@
 
 <!-- SELECTS OCULTOS PARA PAGOS -->
 <select id="pago-tratamiento" style="display:none"></select>
+<select id="pago-medicamento" style="display:none"></select>
 <select id="pago-suplemento" style="display:none"></select>
 
 <!-- TOAST -->
