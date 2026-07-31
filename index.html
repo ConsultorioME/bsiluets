@@ -308,9 +308,9 @@
             <input type="text" class="search-box" style="max-width:300px" placeholder="🔍  Buscar producto..." oninput="buscarInventario(this.value)">
             <select id="filtro-inv-cat" style="background:var(--charcoal);border:1px solid rgba(201,168,108,.15);color:var(--cream);padding:9px 14px;font-family:'Jost',sans-serif;font-size:13px;outline:none" onchange="buscarInventario(document.querySelector('#mod-inventario .search-box').value)">
               <option value="">Todas las categorías</option>
-              <option value="Suplemento">Suplementos</option>
-              <option value="Medicamento">Insumos médicos</option>
-              <option value="Proteína">Cosméticos</option>
+              <option value="Suplemento">Suplemento</option>
+              <option value="Medicamento">Medicamento</option>
+              <option value="Proteína">Proteína</option>
             </select>
             <button class="tb-btn" onclick="openModal('nuevo-prod')">+ Producto</button>
           </div>
@@ -359,7 +359,19 @@
               </div>
               <div class="accion-servicio">
                 <div class="as-header">
-                  <span class="as-title">Suplementos / Medicamentos / Proteínas</span>
+                  <span class="as-title">Medicamentos</span>
+                  <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarMedicPago()">+ Agregar</button>
+                </div>
+                <div id="medic-block">
+                  <div id="medics-container"></div>
+                  <div style="text-align:right;margin-top:6px;font-size:13px;color:var(--gold)">
+                    Subtotal medicamentos: <strong id="subtotal-medics">$0</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="accion-servicio">
+                <div class="as-header">
+                  <span class="as-title">Suplementos / Proteínas</span>
                   <button type="button" class="tb-btn" style="padding:4px 10px;font-size:11px" onclick="agregarSuplPago()">+ Agregar</button>
                 </div>
                 <div id="supl-block">
@@ -371,7 +383,8 @@
               </div>
               <div class="pago-total">
                 <div class="pago-total-row"><span>Tratamientos</span><span id="tot-trat">$0</span></div>
-                <div class="pago-total-row"><span>Suplementos / Med. / Prot.</span><span id="tot-supl">$0</span></div>
+                <div class="pago-total-row"><span>Medicamentos</span><span id="tot-medic">$0</span></div>
+                <div class="pago-total-row"><span>Suplementos / Proteínas</span><span id="tot-supl">$0</span></div>
                 <div class="pago-total-row"><span>TOTAL</span><span id="tot-total">$0</span></div>
               </div>
               <div style="margin-top:16px">
@@ -602,7 +615,7 @@
         <div class="kpi"><div class="kpi-label">💵 Efectivo</div><div class="kpi-val" id="caja-efectivo" style="color:#27AE60">—</div></div>
         <div class="kpi"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-val" id="caja-tarjeta" style="color:#2980B9">—</div></div>
         <div class="kpi"><div class="kpi-label">🏦 Transferencia</div><div class="kpi-val" id="caja-transferencia" style="color:#9b59b6">—</div></div>
-        <div class="kpi"><div class="kpi-label">📲 Crédito <span style="opacity:.5;font-size:9px">(no incluido en Total)</span></div><div class="kpi-val" id="caja-credito" style="color:#e74c3c">—</div></div>
+        <div class="kpi"><div class="kpi-label">📲 Crédito</div><div class="kpi-val" id="caja-credito" style="color:#e74c3c">—</div></div>
         <div class="kpi"><div class="kpi-label">💸 Total gastos</div><div class="kpi-val" id="caja-gastos" style="color:#e74c3c">—</div></div>
         <div class="kpi"><div class="kpi-label">💰 Utilidad neta</div><div class="kpi-val" id="caja-utilidad" style="color:#27AE60">—</div></div>
       </div>
@@ -1273,6 +1286,7 @@
 
 <!-- SELECTS OCULTOS PARA PAGOS -->
 <select id="pago-tratamiento" style="display:none"></select>
+<select id="pago-medicamento" style="display:none"></select>
 <select id="pago-suplemento" style="display:none"></select>
 
 <!-- TOAST -->
