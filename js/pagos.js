@@ -355,25 +355,40 @@ async function registrarCobro() {
 
 // ── CARGAR ÚLTIMOS COBROS ──
 async function cargarUltimosCobros() {
-  const filtro = document.getElementById('filtro-cobros-fecha');
-  if (filtro && !filtro.value) filtro.value = '';
+  const fecha    = document.getElementById('filtro-cobros-fecha')?.value || '';
+  const concepto = document.getElementById('filtro-cobros-concepto')?.value.trim() || '';
 
-  const { data, error } = await db
+  let query = db
     .from('pagos')
     .select('*, pacientes(nombre, apellidos)')
     .eq('eliminado', false)
-    .order('created_at', { ascending: false })
-    .limit(50);
+    .order('created_at', { ascending: false });
+
+  if (fecha)    query = query.eq('fecha', fecha);
+  if (concepto) query = query.ilike('concepto', `%${concepto}%`);
+
+  // Sin búsqueda por concepto: solo los últimos 50 (vista rápida por defecto).
+  // Con búsqueda por concepto: sin límite, para no perder registros antiguos
+  // (ej. saldos a favor viejos que ya salieron de los últimos 50).
+  if (!concepto) query = query.limit(50);
+
+  const { data, error } = await query;
 
   if (error || !data) return;
   window._cobrosData = data;
   renderCobros(data);
 }
 
+// ── FILTRO POR FECHA (consulta directo a Supabase) ──
 function filtrarUltimosCobros() {
-  const fecha = document.getElementById('filtro-cobros-fecha')?.value || '';
-  const data  = window._cobrosData || [];
-  renderCobros(fecha ? data.filter(p => p.fecha === fecha) : data);
+  cargarUltimosCobros();
+}
+
+// ── FILTRO POR CONCEPTO (consulta directo a Supabase, con debounce) ──
+let cobrosConceptoTimeout;
+function buscarCobrosPorConcepto() {
+  clearTimeout(cobrosConceptoTimeout);
+  cobrosConceptoTimeout = setTimeout(() => cargarUltimosCobros(), 400);
 }
 
 function renderCobros(data) {

@@ -433,7 +433,10 @@
             <div class="card">
               <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
                 <span>Últimos Cobros</span>
-                <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="filtro-cobros-concepto" placeholder="Buscar por concepto..." style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" oninput="buscarCobrosPorConcepto()">
+                  <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
+                </div>
               </div>
               <table>
                 <tr><th>Fecha</th><th>Paciente</th><th>Concepto</th><th>Método</th><th>Total</th><th></th></tr>
