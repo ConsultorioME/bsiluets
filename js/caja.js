@@ -47,6 +47,16 @@ async function cargarCaja(fecha) {
     .eq('fecha', fecha)
     .order('created_at', { ascending: true });
 
+  // 3b. Paquetes NUEVOS del día (módulo Paquetes) — el saldo con el que nace
+  //    un paquete (precio_total - pagado, según el esquema elegido: total,
+  //    enganche o crédito total) es deuda generada ese día y debía sumarse
+  //    a "Crédito", pero antes solo se contaban los créditos de `pagos`.
+  const { data: paquetesNuevos } = await db
+    .from('paquetes')
+    .select('precio_total, pagado')
+    .eq('fecha_inicio', fecha)
+    .eq('activo', true);
+
   // 4. Gastos del día
   const { data: gastos } = await db
     .from('gastos')
@@ -85,11 +95,28 @@ async function cargarCaja(fecha) {
     }
   });
 
+  // Deuda NUEVA generada hoy por paquetes recién creados (saldo con el que
+  // nacen: precio_total - pagado inicial). Esto es lo que faltaba: antes
+  // "Crédito" solo veía los cobros en crédito del módulo Pagos.
+  (paquetesNuevos || []).forEach(p => {
+    const saldoInicial = parseFloat(p.precio_total || 0) - parseFloat(p.pagado || 0);
+    if (saldoInicial > 0) totales.credito += saldoInicial;
+  });
+
+  // Todo abono del día (a paquete o a cobro en crédito) reduce la deuda
+  // pendiente, sin importar con qué método se pagó — ya se sumó por su
+  // cuenta a efectivo/tarjeta/transferencia arriba (eso sí es dinero que
+  // entró en caja); aquí solo se descuenta de la deuda mostrada en "Crédito".
+  (abonos || []).forEach(a => {
+    totales.credito -= parseFloat(a.monto || 0);
+  });
+
   // "Crédito" NO es dinero que entró en caja ese día — es solo una deuda
-  // registrada. Se excluye de Total Ingresos / Utilidad Neta para no
-  // duplicar el monto cuando después se liquide con un abono (que sí se
-  // suma en efectivo/tarjeta/transferencia). Se sigue mostrando aparte
-  // como referencia informativa de cuánto se generó en crédito ese día.
+  // registrada (neta de los abonos que se le hayan aplicado hoy). Se excluye
+  // de Total Ingresos / Utilidad Neta para no duplicar el monto cuando
+  // después se liquide con un abono (que sí se suma en
+  // efectivo/tarjeta/transferencia). Se sigue mostrando aparte como
+  // referencia informativa de cuánta deuda neta se generó ese día.
   const totalIngresos = totales.efectivo + totales.tarjeta + totales.transferencia;
   const totalGastos   = (gastos || []).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
   const utilidad      = totalIngresos - totalGastos;
@@ -99,7 +126,8 @@ async function cargarCaja(fecha) {
   document.getElementById('caja-efectivo').textContent     = '$' + (totales.efectivo || 0).toLocaleString();
   document.getElementById('caja-tarjeta').textContent      = '$' + (totales.tarjeta || 0).toLocaleString();
   document.getElementById('caja-transferencia').textContent= '$' + (totales.transferencia || 0).toLocaleString();
-  document.getElementById('caja-credito').textContent      = '$' + (totales.credito || 0).toLocaleString();
+  const creditoNeto = totales.credito || 0;
+  document.getElementById('caja-credito').textContent      = (creditoNeto < 0 ? '-$' : '$') + Math.abs(creditoNeto).toLocaleString();
   document.getElementById('caja-gastos').textContent       = '$' + totalGastos.toLocaleString();
 
   const utilEl = document.getElementById('caja-utilidad');
@@ -281,7 +309,7 @@ async function descargarCajaPDF() {
     ['Efectivo',       `$${(d.totales.efectivo||0).toLocaleString()}`],
     ['Tarjeta',        `$${(d.totales.tarjeta||0).toLocaleString()}`],
     ['Transferencia',  `$${(d.totales.transferencia||0).toLocaleString()}`],
-    ['Crédito',        `$${(d.totales.credito||0).toLocaleString()}`],
+    ['Crédito',        `${(d.totales.credito||0) < 0 ? '-$' : '$'}${Math.abs(d.totales.credito||0).toLocaleString()}`],
     ['Total Gastos',   `$${d.totalGastos.toLocaleString()}`],
     ['Utilidad Neta',  `$${d.utilidad.toLocaleString()}`],
   ];
