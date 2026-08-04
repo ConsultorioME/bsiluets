@@ -6,6 +6,49 @@
 let pacSelIdx = -1;
 let paqSelData = null;
 
+// ── LIMPIAR FORM DE VISITA (tras cerrar la Nota de Venta) ──
+// Evita que queden datos de la visita anterior (paciente, monto, método,
+// paquete seleccionado) que puedan causar conflictos al registrar la
+// siguiente visita.
+function limpiarFormVisita() {
+  paqSelData = null;
+
+  const selPac = document.getElementById('vis-paciente');
+  if (selPac) selPac.value = '';
+
+  const infoPaq = document.getElementById('info-paq-vis');
+  if (infoPaq) infoPaq.style.display = 'none';
+
+  // Quitar el selector de "más de un paquete activo" si quedó insertado
+  const selectorPaq = document.getElementById('vis-selector-paq');
+  if (selectorPaq) selectorPaq.innerHTML = '';
+
+  const fechaEl = document.getElementById('vis-fecha');
+  if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
+
+  const tipoPago = document.getElementById('vis-pago-tipo');
+  if (tipoPago) tipoPago.value = 'no';
+  const bloquePago = document.getElementById('bloque-pago-vis');
+  if (bloquePago) bloquePago.style.display = 'none';
+
+  // Dejar un solo renglón de método de pago, en blanco
+  const metodosCont = document.getElementById('vis-metodos-container');
+  if (metodosCont) {
+    metodosCont.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
+        <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="tarjeta">💳 Tarjeta</option>
+          <option value="transferencia">🏦 Transferencia</option>
+        </select>
+        <input type="number" class="vis-metodo-monto" oninput="actualizarNotaVis()" placeholder="Monto $" step="0.01" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
+      </div>`;
+  }
+
+  const preview = document.getElementById('nota-preview-wrap');
+  if (preview) preview.innerHTML = '<div style="text-align:center;padding:40px;color:var(--cream);opacity:.2;font-size:13px">Selecciona un paciente para previsualizar</div>';
+}
+
 // ── INICIALIZAR ──
 async function initPaquetes() {
   await cargarPaquetes();

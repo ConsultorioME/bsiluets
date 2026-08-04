@@ -79,28 +79,32 @@ async function cargarCaja(fecha) {
 
   (pagos || []).forEach(p => parsearMetodo(p.metodo_pago, p.total));
   (visitas || []).forEach(v => parsearMetodo(v.metodo_pago, v.monto_cobrado));
+
+  // Los abonos de la tabla `abonos` son de dos tipos (ver tipoAbono()):
+  //  - Abono a Paquete (paquete_id): sí cuenta en efectivo/tarjeta/transferencia,
+  //    igual que un cobro normal del día.
+  //  - Abono a Crédito/adeudo (pago_id): es la liquidación de una deuda ya
+  //    registrada en Pagos en un día anterior, así que NO se suma a
+  //    efectivo/tarjeta/transferencia (para no inflar "Total ingresos" del
+  //    día con dinero que ya se había contado como deuda). Se guarda aparte
+  //    en abonosACreditos y solo se refleja en Utilidad Neta.
+  let abonosACreditos = 0;
   (abonos || []).forEach(a => {
-    if (a.metodo_pago?.toLowerCase() !== 'credito') {
+    if (a.pago_id) {
+      abonosACreditos += parseFloat(a.monto || 0);
+    } else {
       parsearMetodo(a.metodo_pago, a.monto);
     }
   });
 
-  // "Crédito" ahora es EXCLUSIVAMENTE lo que en Pagos se etiquetó como
-  // "📋 A crédito — queda en adeudo" (pagos con metodo_pago='credito') ese
-  // día. Ya no se suma el saldo de paquetes nuevos ni se resta por abonos:
-  // los paquetes con saldo se manejan por completo en Paquetes & Visitas, y
-  // los abonos (a paquete o a crédito) son dinero que entra a caja aparte
-  // (ya contado arriba en efectivo/tarjeta/transferencia), no modifican esta
-  // tarjeta informativa.
-  //
-  // "Crédito" NO es dinero que entró en caja ese día — es solo la deuda
-  // registrada ese día en Pagos. Se excluye de Total Ingresos / Utilidad
-  // Neta para no duplicar el monto cuando después se liquide con un abono
-  // (que sí se suma en efectivo/tarjeta/transferencia). Se sigue mostrando
-  // aparte como referencia informativa de cuánta deuda nueva se generó ese día.
-  const totalIngresos = totales.efectivo + totales.tarjeta + totales.transferencia;
+  // Total ingresos = Efectivo + Tarjeta + Transferencia + Crédito (lo
+  // registrado como "a crédito" en Pagos ese día) - Total gastos.
   const totalGastos   = (gastos || []).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
-  const utilidad      = totalIngresos - totalGastos;
+  const totalIngresos = totales.efectivo + totales.tarjeta + totales.transferencia + (totales.credito || 0) - totalGastos;
+
+  // Utilidad neta = Total ingresos + Abonos a adeudos (Créditos) cobrados
+  // ese día (dinero real que sí entró a caja al liquidar una deuda vieja).
+  const utilidad = totalIngresos + abonosACreditos;
 
   // ── KPIs ──
   document.getElementById('caja-total').textContent        = '$' + totalIngresos.toLocaleString();
@@ -218,7 +222,7 @@ async function cargarCaja(fecha) {
   }
 
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -238,6 +242,22 @@ function cargarImagenParaPDF(url) {
     img.onerror = () => reject(new Error('No se pudo cargar la imagen: ' + url));
     img.src = url;
   });
+}
+
+// Imprime una fila "concepto — monto" en el PDF de Caja partiendo el
+// concepto en varios renglones si es muy largo (evita que el texto se
+// encime con la columna del monto, que va alineada a la derecha).
+// Devuelve la nueva posición Y, ya lista para la siguiente fila.
+function imprimirFilaCajaPDF(doc, texto, montoTexto, y) {
+  const anchoMaximoConcepto = 145; // deja espacio libre para el monto a la derecha
+  const lineas = doc.splitTextToSize(texto, anchoMaximoConcepto);
+  lineas.forEach((linea, i) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.text(linea, 15, y);
+    if (i === 0) doc.text(montoTexto, 195, y, { align: 'right' });
+    y += 5;
+  });
+  return y + 1.5; // pequeño respiro antes de la siguiente fila
 }
 
 // ── DESCARGAR PDF ──
@@ -318,10 +338,7 @@ async function descargarCajaPDF() {
   } else {
     d.pagos.forEach(p => {
       const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
-      doc.text(`${nombre} — ${p.concepto || '—'}`, 15, y);
-      doc.text(`$${parseFloat(p.total).toLocaleString()}`, 195, y, { align: 'right' });
-      y += 6;
-      if (y > 270) { doc.addPage(); y = 20; }
+      y = imprimirFilaCajaPDF(doc, `${nombre} — ${p.concepto || '—'}`, `$${parseFloat(p.total).toLocaleString()}`, y);
     });
   }
 
@@ -341,10 +358,7 @@ async function descargarCajaPDF() {
   } else {
     d.visitas.forEach(v => {
       const nombre = v.pacientes ? `${v.pacientes.nombre} ${v.pacientes.apellidos.charAt(0)}.` : '—';
-      doc.text(`${nombre} — Ses. ${v.numero_sesion}`, 15, y);
-      doc.text(`$${parseFloat(v.monto_cobrado).toLocaleString()}`, 195, y, { align: 'right' });
-      y += 6;
-      if (y > 270) { doc.addPage(); y = 20; }
+      y = imprimirFilaCajaPDF(doc, `${nombre} — Ses. ${v.numero_sesion}`, `$${parseFloat(v.monto_cobrado).toLocaleString()}`, y);
     });
   }
 
@@ -365,10 +379,8 @@ async function descargarCajaPDF() {
     d.abonos.forEach(a => {
       const nombre = a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos.charAt(0)}.` : '—';
       const tipo   = tipoAbono(a).label;
-      doc.text(`${nombre} — ${tipo}: ${a.referencia || 'Abono'} (${a.metodo_pago || '—'})`, 15, y);
-      doc.text(`$${parseFloat(a.monto).toLocaleString()}`, 195, y, { align: 'right' });
-      y += 6;
-      if (y > 270) { doc.addPage(); y = 20; }
+      const texto  = `${nombre} — ${tipo}: ${a.referencia || 'Abono'} (${a.metodo_pago || '—'})`;
+      y = imprimirFilaCajaPDF(doc, texto, `$${parseFloat(a.monto).toLocaleString()}`, y);
     });
   }
   if (y > 270) { doc.addPage(); y = 20; }
@@ -382,10 +394,7 @@ async function descargarCajaPDF() {
   doc.setFontSize(9);
   doc.setTextColor(60);
   (d.gastos || []).forEach(g => {
-    doc.text(`${g.categoria} — ${g.descripcion}`, 15, y);
-    doc.text(`$${parseFloat(g.monto).toLocaleString()}`, 195, y, { align: 'right' });
-    y += 6;
-    if (y > 270) { doc.addPage(); y = 20; }
+    y = imprimirFilaCajaPDF(doc, `${g.categoria} — ${g.descripcion}`, `$${parseFloat(g.monto).toLocaleString()}`, y);
   });
 
   // Footer
