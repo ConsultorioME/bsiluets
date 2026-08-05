@@ -9,6 +9,16 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Fecha de HOY en zona horaria LOCAL, formato YYYY-MM-DD. No usar
+// `new Date().toISOString()` para esto: convierte a UTC, y en México
+// (UTC-6/-7) eso adelanta la fecha un día durante la tarde/noche.
+function fechaHoyISO() {
+  const d = new Date();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
 // ─── VERIFICAR LICENCIA ───
 async function verificarLicencia() {
   const { data, error } = await db

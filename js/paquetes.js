@@ -24,7 +24,7 @@ function limpiarFormVisita() {
   if (selectorPaq) selectorPaq.innerHTML = '';
 
   const fechaEl = document.getElementById('vis-fecha');
-  if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
+  if (fechaEl) fechaEl.value = fechaHoyISO();
 
   const tipoPago = document.getElementById('vis-pago-tipo');
   if (tipoPago) tipoPago.value = 'no';
@@ -54,7 +54,7 @@ async function initPaquetes() {
   await cargarPaquetes();
   await cargarSelectsModal();
   await cargarSelectVisita();
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   document.getElementById('vis-fecha').value = hoy;
   document.getElementById('npaq-fecha').value = hoy;
   await cargarNotasHoy();
@@ -459,8 +459,8 @@ function actualizarNotaVis() {
   const monto    = tipoPago === 'no' ? 0 : obtenerMontoTotalVis();
   const saldoAntes   = paqSelData.precio_total - paqSelData.pagado;
   const saldoDespues = Math.max(0, saldoAntes - monto);
-  const folio  = 'NV-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
-  const fecha  = document.getElementById('vis-fecha').value || new Date().toISOString().split('T')[0];
+  const folio  = 'NV-' + fechaHoyISO().replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
+  const fecha  = document.getElementById('vis-fecha').value || fechaHoyISO();
   const esZero = monto === 0;
 
   // Obtener nombre del paciente del select
@@ -562,7 +562,7 @@ async function reimprimirNota(visitaId) {
 let todasLasNotas = [];
 
 async function cargarNotasHoy() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   const tbody = document.getElementById('tabla-notas-hoy');
   const fechaEl = document.getElementById('notas-fecha-hoy');
 
@@ -620,7 +620,7 @@ function filtrarNotas() {
 
   // Si cambió la fecha, recargar desde Supabase
   if (fecha) {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = fechaHoyISO();
     if (fecha !== hoy && todasLasNotas.length > 0 && todasLasNotas[0]?.fecha !== fecha) {
       cargarNotasHoy();
       return;
@@ -674,7 +674,7 @@ function renderNotasFiltradas(notas) {
 }
 
 function limpiarFiltrosNotas() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   const filtroFecha = document.getElementById('filtro-notas-fecha');
   const filtroPac   = document.getElementById('filtro-notas-paciente');
   if (filtroFecha) filtroFecha.value = hoy;

@@ -497,7 +497,7 @@ async function cargarFechasBloqueadasConfig() {
   const tbody = document.getElementById('tabla-fechas-bloqueadas');
   if (!tbody) return;
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   const { data } = await db
     .from('fechas_bloqueadas')
     .select('*')

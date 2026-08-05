@@ -389,7 +389,7 @@ async function cargarEliminados() {
 
 // ─── DASHBOARD ───
 async function initDashboard() {
-  const hoy   = new Date().toISOString().split('T')[0];
+  const hoy   = fechaHoyISO();
   const mes   = hoy.substring(0, 7);
   const desde = `${mes}-01`;
   const hasta = `${mes}-${new Date(new Date().getFullYear(), new Date().getMonth()+1, 0).getDate()}`;

@@ -22,7 +22,7 @@ async function initGastos() {
   }
 
   // Fecha por defecto en modal
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   const fechaEl = document.getElementById('gasto-fecha');
   if (fechaEl && !fechaEl.value) fechaEl.value = hoy;
 
@@ -205,7 +205,7 @@ function limpiarFormGasto() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   document.getElementById('gasto-fecha').value     = hoy;
   document.getElementById('gasto-categoria').value = 'Insumos y productos';
   document.getElementById('gasto-metodo').value    = 'efectivo';

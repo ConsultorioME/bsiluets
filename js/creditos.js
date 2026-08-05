@@ -12,13 +12,7 @@ async function initCreditos() {
 }
 
 async function cargarCreditos() {
-  // 1. Paquetes activos (el saldo se calcula más abajo con los abonos reales)
-  const { data: paquetes } = await db
-    .from('paquetes')
-    .select('*, pacientes(id, nombre, apellidos, telefono), tratamientos(nombre)')
-    .eq('activo', true);
-
-  // 2. Cobros en crédito no liquidados ni eliminados
+  // 1. Cobros en crédito no liquidados ni eliminados
   const { data: cobrosCredito } = await db
     .from('pagos')
     .select('*, pacientes(id, nombre, apellidos)')
@@ -26,26 +20,20 @@ async function cargarCreditos() {
     .eq('liquidado', false)
     .eq('eliminado', false);
 
-  // 3. TODOS los abonos — fuente de verdad para calcular el saldo real.
-  //    Si alguien agrega/edita/elimina un abono directamente en Supabase,
-  //    el saldo mostrado aquí se recalcula solo la próxima vez que se cargue
-  //    esta pantalla, sin necesidad de tocar `paquetes.pagado` ni `pagos.total`.
+  // 2. Abonos ligados a pagos (pago_id) — fuente de verdad para calcular el
+  //    saldo real. Si alguien agrega/edita/elimina un abono directamente en
+  //    Supabase, el saldo mostrado aquí se recalcula solo la próxima vez que
+  //    se cargue esta pantalla, sin necesidad de tocar `pagos.total`.
   const { data: abonosRaw } = await db
     .from('abonos')
-    .select('paquete_id, pago_id, monto, paciente_id');
+    .select('pago_id, monto, paciente_id')
+    .not('pago_id', 'is', null);
 
-  const abonosPorPaquete = {};
-  const abonosPorPago    = {};
+  const abonosPorPago = {};
   (abonosRaw || []).forEach(a => {
     const monto = parseFloat(a.monto || 0);
-    if (a.paquete_id) abonosPorPaquete[a.paquete_id] = (abonosPorPaquete[a.paquete_id] || 0) + monto;
-    if (a.pago_id)    abonosPorPago[a.pago_id]       = (abonosPorPago[a.pago_id] || 0) + monto;
+    if (a.pago_id) abonosPorPago[a.pago_id] = (abonosPorPago[a.pago_id] || 0) + monto;
   });
-
-  // Saldo de paquete = precio_total (fijo, no se muta) - abonos aplicados a ese paquete (dinámico)
-  const paqConSaldo = (paquetes || [])
-    .map(p => ({ ...p, _saldo: Math.max(0, parseFloat(p.precio_total || 0) - (abonosPorPaquete[p.id] || 0)) }))
-    .filter(p => p._saldo > 0.5);
 
   // Saldo de cobro en crédito = total (monto original de la venta, NUNCA se
   // muta) - abonos aplicados a ese cobro (dinámico, desde `abonos`). `total`
@@ -55,40 +43,33 @@ async function cargarCreditos() {
     .map(c => ({ ...c, _saldo: Math.max(0, parseFloat(c.total || 0) - (abonosPorPago[c.id] || 0)) }))
     .filter(c => c._saldo > 0.5);
 
-  // 4. Consolidar por paciente
+  // 3. Consolidar por paciente. Los paquetes con saldo ya NO se manejan aquí:
+  //    viven exclusivamente en el módulo Paquetes & Visitas.
   const pacientesMap = {};
-
-  paqConSaldo.forEach(p => {
-    const id     = p.pacientes?.id;
-    const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
-    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, paquetes: [], cobros: [], diasDesde: 0 };
-    const dias = Math.floor((new Date() - new Date(p.fecha_inicio)) / (1000*60*60*24));
-    pacientesMap[id].paquetes.push({ ...p, dias });
-    if (dias > pacientesMap[id].diasDesde) pacientesMap[id].diasDesde = dias;
-  });
 
   cobrosConSaldo.forEach(c => {
     const id     = c.pacientes?.id;
     const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : '—';
-    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, paquetes: [], cobros: [], diasDesde: 0 };
+    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, cobros: [], diasDesde: 0 };
     const dias = Math.floor((new Date() - new Date(c.fecha)) / (1000*60*60*24));
     pacientesMap[id].cobros.push({ ...c, dias });
     if (dias > pacientesMap[id].diasDesde) pacientesMap[id].diasDesde = dias;
   });
 
-  // 5. Abonos registrados (historial) — se consultan TODOS (no solo los de
-  //    pacientes con deuda actual), porque el historial de abonos de un
-  //    cliente es un registro GLOBAL y nunca debe desaparecer solo porque el
-  //    cobro/paquete específico al que se aplicó ya no esté pendiente
+  // 4. Abonos registrados (historial) ligados a pagos — se consultan TODOS
+  //    (no solo los de pacientes con deuda actual), porque el historial de
+  //    abonos de un cliente es un registro GLOBAL y nunca debe desaparecer
+  //    solo porque el cobro específico al que se aplicó ya no esté pendiente
   //    (liquidado, corregido o eliminado por duplicado).
   const { data: abonosTodos } = await db
     .from('abonos')
-    .select('paciente_id, monto, pacientes(id, nombre, apellidos)');
+    .select('paciente_id, monto, pago_id, pacientes(id, nombre, apellidos)')
+    .not('pago_id', 'is', null);
 
   (abonosTodos || []).forEach(a => {
     const id     = a.paciente_id;
     const nombre = a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos}` : '—';
-    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, paquetes: [], cobros: [], diasDesde: 0 };
+    if (!pacientesMap[id]) pacientesMap[id] = { id, nombre, cobros: [], diasDesde: 0 };
     pacientesMap[id].abonosTotal = (pacientesMap[id].abonosTotal || 0) + parseFloat(a.monto || 0);
   });
 
@@ -97,9 +78,7 @@ async function cargarCreditos() {
   // KPIs — se calculan SOLO sobre quienes tienen deuda pendiente real (saldo
   // dinámico > 0), aunque la tabla de abajo siga mostrando a todos (incluyendo
   // saldo $0 con historial de abonos) para que nadie "desaparezca" de la vista.
-  const saldoTotalPaciente = p =>
-    p.paquetes.reduce((a, pk) => a + pk._saldo, 0) +
-    p.cobros.reduce((a, c) => a + c._saldo, 0);
+  const saldoTotalPaciente = p => p.cobros.reduce((a, c) => a + c._saldo, 0);
 
   const pacientesConDeuda = pacientes.filter(p => saldoTotalPaciente(p) > 0.5);
 
@@ -128,23 +107,17 @@ function renderAlertasCredito(pacientes) {
   const ordenados = pacientes.sort((a, b) => b.diasDesde - a.diasDesde).slice(0, 5);
 
   cont.innerHTML = ordenados.map(p => {
-    const saldoPaq    = p.paquetes.reduce((a, pk) => a + pk._saldo, 0);
-    const saldoCobros = p.cobros.reduce((a, c) => a + c._saldo, 0);
-    const totalSaldo  = saldoPaq + saldoCobros;
+    const totalSaldo = p.cobros.reduce((a, c) => a + c._saldo, 0);
 
     let cls = p.diasDesde > 30 ? 'rojo' : p.diasDesde > 15 ? 'naranja' : 'amarillo';
     let ico = p.diasDesde > 30 ? '🔴' : p.diasDesde > 15 ? '🟠' : '🟡';
-
-    const detalle = [];
-    if (saldoPaq > 0)    detalle.push(`Paquetes: $${saldoPaq.toLocaleString()}`);
-    if (saldoCobros > 0) detalle.push(`Cobros crédito: $${saldoCobros.toLocaleString()}`);
 
     return `
       <div class="alerta-credito ${cls}">
         <div class="alerta-icon">${ico}</div>
         <div class="alerta-info">
           <div class="alerta-name">${p.nombre}</div>
-          <div class="alerta-detail">${detalle.join(' · ')}</div>
+          <div class="alerta-detail">Cobros crédito: $${totalSaldo.toLocaleString()}</div>
           <div class="alerta-days ${cls}">${p.diasDesde} días de antigüedad</div>
         </div>
         <div style="text-align:right">
@@ -164,14 +137,12 @@ function renderTablaCreditos(pacientes) {
   if (!tbody) return;
 
   if (pacientes.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;opacity:.3;padding:20px">Sin adeudos pendientes</td></tr>`; // 7 columnas: Paciente, Adeudo paquetes, Cobros crédito, Abonos registrados, Saldo, Antigüedad, Acción
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;opacity:.3;padding:20px">Sin adeudos pendientes</td></tr>`; // 6 columnas: Paciente, Cobros crédito, Abonos registrados, Saldo, Antigüedad, Acción
     return;
   }
 
   tbody.innerHTML = pacientes.sort((a,b) => b.diasDesde - a.diasDesde).map(p => {
-    const saldoPaq    = p.paquetes.reduce((a, pk) => a + pk._saldo, 0);
-    const saldoCobros = p.cobros.reduce((a, c) => a + c._saldo, 0);
-    const totalSaldo  = saldoPaq + saldoCobros; // Saldo real, ya neto de abonos (siempre recalculado)
+    const totalSaldo  = p.cobros.reduce((a, c) => a + c._saldo, 0); // Saldo real, ya neto de abonos (siempre recalculado)
     const abonosTotal = p.abonosTotal || 0;
     const dias        = p.diasDesde;
 
@@ -181,12 +152,11 @@ function renderTablaCreditos(pacientes) {
 
     return `<tr>
       <td><strong>${p.nombre}</strong></td>
-      <td style="color:var(--gold);font-size:12px">${saldoPaq > 0 ? '$'+saldoPaq.toLocaleString() : '—'}</td>
       <td style="color:var(--info,#2980B9);font-size:12px;cursor:help" 
         title="${p.cobros && p.cobros.length > 0 ? p.cobros.map(c => (c.concepto||'Cobro') + ': $' + c._saldo.toLocaleString()).join(' | ') : '—'}">
-        ${saldoCobros > 0 ? '$'+saldoCobros.toLocaleString() : '—'}
+        ${totalSaldo > 0 ? '$'+totalSaldo.toLocaleString() : '—'}
       </td>
-      <td style="color:#27AE60;font-size:12px" title="Suma histórica de abonos registrados para este paciente (puede incluir pagos a cobros o paquetes ya liquidados)">
+      <td style="color:#27AE60;font-size:12px" title="Suma histórica de abonos registrados para este paciente (puede incluir cobros ya liquidados)">
         ${abonosTotal > 0 ? '$'+abonosTotal.toLocaleString() : '—'}
       </td>
       <td style="color:${totalSaldo > 0 ? '#e74c3c' : '#27AE60'};font-weight:600" title="Saldo pendiente real (adeudo menos abonos aplicados)">${totalSaldo > 0 ? '$'+totalSaldo.toLocaleString() : 'Sin adeudo'}</td>
@@ -203,13 +173,6 @@ let creditoActual = {};
 let conceptoAbonoSeleccionado = null;
 
 async function abrirDetalleCredito(pacienteId, nombre) {
-  // Cargar paquetes del paciente
-  const { data: paquetes } = await db
-    .from('paquetes')
-    .select('*, tratamientos(nombre)')
-    .eq('paciente_id', pacienteId)
-    .eq('activo', true);
-
   // Cargar cobros en crédito del paciente
   const { data: cobros } = await db
     .from('pagos')
@@ -226,27 +189,19 @@ async function abrirDetalleCredito(pacienteId, nombre) {
     .eq('paciente_id', pacienteId)
     .order('fecha', { ascending: false });
 
-  const abonosPorPaquete = {};
-  const abonosPorPago    = {};
+  const abonosPorPago = {};
   (abonos || []).forEach(a => {
     const monto = parseFloat(a.monto || 0);
-    if (a.paquete_id) abonosPorPaquete[a.paquete_id] = (abonosPorPaquete[a.paquete_id] || 0) + monto;
-    if (a.pago_id)    abonosPorPago[a.pago_id]       = (abonosPorPago[a.pago_id] || 0) + monto;
+    if (a.pago_id) abonosPorPago[a.pago_id] = (abonosPorPago[a.pago_id] || 0) + monto;
   });
-
-  const paqConSaldo = (paquetes || [])
-    .map(p => ({ ...p, _saldo: Math.max(0, parseFloat(p.precio_total || 0) - (abonosPorPaquete[p.id] || 0)) }))
-    .filter(p => p._saldo > 0.5);
 
   const cobrosConSaldo = (cobros || [])
     .map(c => ({ ...c, _saldo: Math.max(0, parseFloat(c.total || 0) - (abonosPorPago[c.id] || 0)) }))
     .filter(c => c._saldo > 0.5);
 
-  const saldoPaq    = paqConSaldo.reduce((a, p) => a + p._saldo, 0);
-  const saldoCobros = cobrosConSaldo.reduce((a, c) => a + c._saldo, 0);
-  const totalSaldo  = saldoPaq + saldoCobros;
+  const totalSaldo = cobrosConSaldo.reduce((a, c) => a + c._saldo, 0);
 
-  creditoActual = { pacienteId, nombre, paqConSaldo, cobros: cobrosConSaldo, totalSaldo };
+  creditoActual = { pacienteId, nombre, cobros: cobrosConSaldo, totalSaldo };
   conceptoAbonoSeleccionado = null;
 
   // Encabezado / resumen (siempre visible, sin importar el concepto elegido)
@@ -257,10 +212,12 @@ async function abrirDetalleCredito(pacienteId, nombre) {
   renderListaConceptosAbono();
   volverListaConceptos(); // asegura que el modal siempre abra en la vista de lista
 
-  // Historial de abonos (siempre visible, con el concepto real de cada uno)
+  // Historial de abonos (solo los ligados a pagos/crédito; los de paquetes
+  // ya se ven en el módulo Paquetes & Visitas y no se duplican aquí).
+  const abonosCredito = (abonos || []).filter(a => a.pago_id);
   const cont = document.getElementById('historial-abonos');
-  if (abonos && abonos.length > 0) {
-    cont.innerHTML = abonos.map(a => `
+  if (abonosCredito.length > 0) {
+    cont.innerHTML = abonosCredito.map(a => `
       <div class="abono-item">
         <span class="abono-fecha">${a.fecha || '—'}</span>
         <span class="abono-desc">${a.referencia || 'Abono'}</span>
@@ -274,24 +231,14 @@ async function abrirDetalleCredito(pacienteId, nombre) {
   openModal('abono');
 }
 
-// Pinta la lista de "Paquetes con saldo" y "Cobros en crédito pendientes",
-// cada uno con su propio botón "Abonar aquí" para que el usuario elija
-// explícitamente a dónde va cada abono (sin reparto automático).
+// Pinta la lista de "Cobros en crédito pendientes", cada uno con su propio
+// botón "Abonar aquí" para que el usuario elija explícitamente a cuál cobro
+// va cada abono (sin reparto automático). Los paquetes con saldo ya no se
+// gestionan desde aquí: viven en el módulo Paquetes & Visitas.
 function renderListaConceptosAbono() {
   const cont = document.getElementById('lista-conceptos-abono');
   if (!cont) return;
   let html = '';
-
-  if (creditoActual.paqConSaldo.length > 0) {
-    html += `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:6px;margin-top:4px">Paquetes con saldo</div>`;
-    html += creditoActual.paqConSaldo.map(p => `
-      <div class="abono-item" style="align-items:center;gap:8px">
-        <span class="abono-fecha" style="width:auto;margin-right:8px">${p.tratamientos?.nombre || '—'}</span>
-        <span class="abono-desc">Ses. ${p.sesion_actual}/${p.total_sesiones}</span>
-        <span style="color:#e74c3c;font-weight:500">$${p._saldo.toLocaleString()}</span>
-        <button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="seleccionarConceptoAbono('paquete','${p.id}')">Abonar aquí</button>
-      </div>`).join('');
-  }
 
   if (creditoActual.cobros.length > 0) {
     html += `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#2980B9;opacity:.8;margin-bottom:6px;margin-top:14px">Cobros en crédito pendientes</div>`;
@@ -308,25 +255,16 @@ function renderListaConceptosAbono() {
   cont.innerHTML = html || '<div style="font-size:12px;color:var(--cream);opacity:.3;padding:8px 0">Sin conceptos pendientes de abono ✓</div>';
 }
 
-// El usuario elige explícitamente a qué paquete o cobro va el abono.
+// El usuario elige explícitamente a qué cobro en crédito va el abono.
 function seleccionarConceptoAbono(tipo, id) {
-  let item, nombre, saldo;
+  const item = creditoActual.cobros.find(c => String(c.id) === String(id));
+  if (!item) return;
+  const nombre = item.concepto || 'Cobro en crédito';
+  const saldo  = item._saldo;
 
-  if (tipo === 'paquete') {
-    item = creditoActual.paqConSaldo.find(p => String(p.id) === String(id));
-    if (!item) return;
-    nombre = `${item.tratamientos?.nombre || 'Paquete'} (Ses. ${item.sesion_actual}/${item.total_sesiones})`;
-    saldo  = item._saldo;
-  } else {
-    item = creditoActual.cobros.find(c => String(c.id) === String(id));
-    if (!item) return;
-    nombre = item.concepto || 'Cobro en crédito';
-    saldo  = item._saldo;
-  }
+  conceptoAbonoSeleccionado = { tipo: 'cobro', id, item, nombre, saldo };
 
-  conceptoAbonoSeleccionado = { tipo, id, item, nombre, saldo };
-
-  document.getElementById('abono-concepto-tipo').textContent   = tipo === 'paquete' ? 'Paquete' : 'Cobro en crédito';
+  document.getElementById('abono-concepto-tipo').textContent   = 'Cobro en crédito';
   document.getElementById('abono-concepto-nombre').textContent = nombre;
   document.getElementById('abono-concepto-saldo').textContent  = '$' + saldo.toLocaleString();
   document.getElementById('abono-saldo-nuevo').textContent     = '$' + saldo.toLocaleString();
@@ -334,7 +272,7 @@ function seleccionarConceptoAbono(tipo, id) {
   document.getElementById('abono-monto').value      = '';
   document.getElementById('abono-referencia').value = '';
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   document.getElementById('abono-fecha').value = hoy;
 
   document.getElementById('abono-vista-lista').style.display   = 'none';
@@ -374,37 +312,24 @@ async function guardarAbonoReal() {
   if (monto <= 0) { showToast('⚠ Ingresa un monto válido'); return; }
   if (monto > conceptoAbonoSeleccionado.saldo + 0.5) { showToast('⚠ El abono supera el saldo de este concepto'); return; }
 
-  const { tipo, item, nombre, saldo } = conceptoAbonoSeleccionado;
+  const { item, nombre, saldo } = conceptoAbonoSeleccionado;
   const nuevoSaldoConcepto = Math.max(0, saldo - monto);
 
-  if (tipo === 'cobro') {
-    // IMPORTANTE: `total` NUNCA se toca aquí. `total` es el monto ORIGINAL de
-    // la venta (lo usan también Últimos Cobros, Caja y el recibo del cobro),
-    // no el saldo. El saldo siempre se calcula como total - SUMA(abonos), así
-    // que solo actualizamos el flag `liquidado` cuando el saldo llega a 0.
-    if (nuevoSaldoConcepto <= 0.5) {
-      await db.from('pagos').update({ liquidado: true }).eq('id', item.id);
-    }
-    await db.from('abonos').insert([{
-      paciente_id: creditoActual.pacienteId,
-      pago_id:     item.id,
-      monto:       monto,
-      metodo_pago: metodo,
-      fecha:       fecha,
-      referencia:  ref || `Abono a cobro en crédito: ${nombre}`,
-    }]);
-  } else {
-    const nuevoPagado = parseFloat(item.pagado || 0) + monto;
-    await db.from('paquetes').update({ pagado: nuevoPagado }).eq('id', item.id);
-    await db.from('abonos').insert([{
-      paquete_id:  item.id,
-      paciente_id: creditoActual.pacienteId,
-      monto:       monto,
-      metodo_pago: metodo,
-      fecha:       fecha,
-      referencia:  ref || `Abono a paquete: ${nombre}`,
-    }]);
+  // IMPORTANTE: `total` NUNCA se toca aquí. `total` es el monto ORIGINAL de
+  // la venta (lo usan también Últimos Cobros, Caja y el recibo del cobro),
+  // no el saldo. El saldo siempre se calcula como total - SUMA(abonos), así
+  // que solo actualizamos el flag `liquidado` cuando el saldo llega a 0.
+  if (nuevoSaldoConcepto <= 0.5) {
+    await db.from('pagos').update({ liquidado: true }).eq('id', item.id);
   }
+  await db.from('abonos').insert([{
+    paciente_id: creditoActual.pacienteId,
+    pago_id:     item.id,
+    monto:       monto,
+    metodo_pago: metodo,
+    fecha:       fecha,
+    referencia:  ref || `Abono a cobro en crédito: ${nombre}`,
+  }]);
 
   const nuevoTotalSaldoPaciente = Math.max(0, creditoActual.totalSaldo - monto);
 
@@ -421,7 +346,7 @@ async function guardarAbonoReal() {
         <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
         <div class="nota-row"><span>Paciente</span><strong>${creditoActual.nombre}</strong></div>
         <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
-        <div class="nota-row"><span>Tipo</span><span>${tipo === 'paquete' ? 'Paquete' : 'Cobro en crédito'}</span></div>
+        <div class="nota-row"><span>Tipo</span><span>Cobro en crédito</span></div>
         <div class="nota-row"><span>Concepto</span><span>${nombre}</span></div>
         <div class="nota-row"><span>Referencia</span><span>${ref || '—'}</span></div>
         <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
@@ -434,7 +359,7 @@ async function guardarAbonoReal() {
           <span>${metodoLabel[metodo] || metodo}</span>
         </div>
         <div class="nota-row" style="font-size:12px;color:#27AE60">
-          <span>Saldo restante (${tipo === 'paquete' ? 'este paquete' : 'este cobro'})</span>
+          <span>Saldo restante (este cobro)</span>
           <span><strong>$${nuevoSaldoConcepto.toLocaleString()}</strong></span>
         </div>
         <div class="nota-row" style="font-size:12px;color:var(--cream);opacity:.7">

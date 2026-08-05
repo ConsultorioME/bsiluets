@@ -414,15 +414,16 @@
               <div class="fg" style="margin-top:14px">
                 <label style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--cream);opacity:.4;display:block;margin-bottom:6px">Tipo de cobro</label>
                 <div style="display:flex;gap:10px">
-                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.8">
-                    <input type="radio" name="tipo-cobro" id="cobro-contado" value="contado" checked style="accent-color:var(--gold)"> 
+                  <label id="cobro-contado-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.8">
+                    <input type="radio" name="tipo-cobro" id="cobro-contado" value="contado" checked style="accent-color:var(--gold)">
                     ✅ Contado — pago inmediato
                   </label>
                   <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--cream);opacity:.8">
-                    <input type="radio" name="tipo-cobro" id="cobro-credito" value="credito" style="accent-color:var(--gold)"> 
+                    <input type="radio" name="tipo-cobro" id="cobro-credito" value="credito" style="accent-color:var(--gold)">
                     📋 A crédito — queda en adeudo
                   </label>
                 </div>
+                <div id="cobro-aviso" style="display:none;color:#e74c3c;font-size:11px;margin-top:8px">⚠ El monto capturado en Método de pago no coincide con el Total — no puedes marcar "Contado" hasta que sean iguales. Se dejó como "A crédito".</div>
               </div>
 
 
@@ -612,15 +613,10 @@
         </div>
         <button class="tb-btn" onclick="initCaja()">🔄 Actualizar</button>
         <button class="tb-btn" onclick="descargarCajaPDF()">📄 Descargar PDF</button>
-      </div>
-      <div class="kpi-grid" style="margin-bottom:24px">
-        <div class="kpi"><div class="kpi-label">Total ingresos</div><div class="kpi-val" id="caja-total">—</div></div>
-        <div class="kpi"><div class="kpi-label">💵 Efectivo</div><div class="kpi-val" id="caja-efectivo" style="color:#27AE60">—</div></div>
-        <div class="kpi"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-val" id="caja-tarjeta" style="color:#2980B9">—</div></div>
-        <div class="kpi"><div class="kpi-label">🏦 Transferencia</div><div class="kpi-val" id="caja-transferencia" style="color:#9b59b6">—</div></div>
-        <div class="kpi"><div class="kpi-label">📲 Crédito</div><div class="kpi-val" id="caja-credito" style="color:#e74c3c">—</div></div>
-        <div class="kpi"><div class="kpi-label">💸 Total gastos</div><div class="kpi-val" id="caja-gastos" style="color:#e74c3c">—</div></div>
-        <div class="kpi"><div class="kpi-label">💰 Utilidad neta</div><div class="kpi-val" id="caja-utilidad" style="color:#27AE60">—</div></div>
+        <div class="kpi" style="margin:0 0 0 auto;min-width:220px">
+          <div class="kpi-label">Total Global de Caja</div>
+          <div class="kpi-val" id="caja-total-global">—</div>
+        </div>
       </div>
       <div class="dash-grid">
         <div class="card">
@@ -629,6 +625,7 @@
             <tr><th>Paciente</th><th>Concepto</th><th>Método</th><th>Monto</th></tr>
             <tbody id="caja-tabla-pagos"></tbody>
           </table>
+          <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:var(--gold);font-weight:600">Subtotal: <span id="caja-subtotal-pagos">$0</span></div>
         </div>
         <div class="card">
           <div class="card-title">Abonos de sesiones (Paquetes)</div>
@@ -636,6 +633,7 @@
             <tr><th>Paciente</th><th>Sesión</th><th>Método</th><th>Monto</th></tr>
             <tbody id="caja-tabla-visitas"></tbody>
           </table>
+          <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:var(--gold);font-weight:600">Subtotal: <span id="caja-subtotal-visitas">$0</span></div>
         </div>
       </div>
       <div class="card" style="margin-top:20px">
@@ -644,6 +642,7 @@
           <tr><th>Paciente</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
           <tbody id="caja-tabla-abonos"></tbody>
         </table>
+        <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:var(--gold);font-weight:600">Subtotal: <span id="caja-subtotal-abonos">$0</span></div>
       </div>
     </div>
 

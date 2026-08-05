@@ -7,7 +7,7 @@
 async function initReportes() {
   poblarSelectMes();
   const sel = document.getElementById('reporte-mes');
-  const [year, month] = (sel?.value || new Date().toISOString().slice(0,7)).split('-');
+  const [year, month] = (sel?.value || fechaHoyISO().slice(0,7)).split('-');
   await cargarReportes(parseInt(year), parseInt(month));
 }
 

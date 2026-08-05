@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────
 
 async function initCaja() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   const inputFecha = document.getElementById('caja-fecha');
   if (inputFecha && !inputFecha.value) inputFecha.value = hoy;
   const fecha = inputFecha?.value || hoy;
@@ -106,18 +106,18 @@ async function cargarCaja(fecha) {
   // ese día (dinero real que sí entró a caja al liquidar una deuda vieja).
   const utilidad = totalIngresos + abonosACreditos;
 
-  // ── KPIs ──
-  document.getElementById('caja-total').textContent        = '$' + totalIngresos.toLocaleString();
-  document.getElementById('caja-efectivo').textContent     = '$' + (totales.efectivo || 0).toLocaleString();
-  document.getElementById('caja-tarjeta').textContent      = '$' + (totales.tarjeta || 0).toLocaleString();
-  document.getElementById('caja-transferencia').textContent= '$' + (totales.transferencia || 0).toLocaleString();
-  const creditoNeto = totales.credito || 0;
-  document.getElementById('caja-credito').textContent      = (creditoNeto < 0 ? '-$' : '$') + Math.abs(creditoNeto).toLocaleString();
-  document.getElementById('caja-gastos').textContent       = '$' + totalGastos.toLocaleString();
+  // ── Subtotales de cada sección (basados en los registros mostrados) ──
+  const subtotalPagos   = (pagos || []).reduce((s, p) => s + parseFloat(p.total || 0), 0);
+  const subtotalVisitas = (visitas || []).reduce((s, v) => s + parseFloat(v.monto_cobrado || 0), 0);
+  const subtotalAbonos  = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+  const subtotalGastos  = totalGastos;
+  const totalGlobal     = subtotalPagos + subtotalVisitas + subtotalAbonos - subtotalGastos;
 
-  const utilEl = document.getElementById('caja-utilidad');
-  utilEl.textContent = (utilidad < 0 ? '-$' : '$') + Math.abs(utilidad).toLocaleString();
-  utilEl.style.color = utilidad >= 0 ? '#27AE60' : '#e74c3c';
+  const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setTexto('caja-subtotal-pagos',   '$' + subtotalPagos.toLocaleString());
+  setTexto('caja-subtotal-visitas', '$' + subtotalVisitas.toLocaleString());
+  setTexto('caja-subtotal-abonos',  '$' + subtotalAbonos.toLocaleString());
+  setTexto('caja-total-global',     (totalGlobal < 0 ? '-$' : '$') + Math.abs(totalGlobal).toLocaleString());
 
   // ── Tabla Pagos ──
   const tbPagos = document.getElementById('caja-tabla-pagos');
@@ -202,7 +202,8 @@ async function cargarCaja(fecha) {
         <table>
           <tr><th>Categoría</th><th>Descripción</th><th>Método</th><th>Monto</th></tr>
           <tbody id="caja-tabla-gastos"></tbody>
-        </table>`;
+        </table>
+        <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:var(--gold);font-weight:600">Subtotal: <span id="caja-subtotal-gastos">$0</span></div>`;
       cajaMod.appendChild(card);
       tbGastos = document.getElementById('caja-tabla-gastos');
     }
@@ -220,9 +221,10 @@ async function cargarCaja(fecha) {
       </tr>`).join('');
     }
   }
+  setTexto('caja-subtotal-gastos', '$' + subtotalGastos.toLocaleString());
 
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos, totalGlobal };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -258,6 +260,18 @@ function imprimirFilaCajaPDF(doc, texto, montoTexto, y) {
     y += 5;
   });
   return y + 1.5; // pequeño respiro antes de la siguiente fila
+}
+
+// Imprime la línea de subtotal de una sección del PDF de Caja (label en
+// dorado, monto alineado a la derecha) y devuelve la nueva posición Y.
+function imprimirSubtotalCajaPDF(doc, label, monto, y) {
+  if (y > 270) { doc.addPage(); y = 20; }
+  monto = monto || 0;
+  doc.setFontSize(9.5);
+  doc.setTextColor(201, 168, 108);
+  doc.text(label + ':', 15, y);
+  doc.text(`${monto < 0 ? '-$' : '$'}${Math.abs(monto).toLocaleString()}`, 195, y, { align: 'right' });
+  return y + 6;
 }
 
 // ── DESCARGAR PDF ──
@@ -301,27 +315,9 @@ async function descargarCajaPDF() {
   doc.setDrawColor(201, 168, 108);
   doc.line(15, headerY + 13, 195, headerY + 13);
 
-  // KPIs
   let y = headerY + 21;
   doc.setFontSize(10);
   doc.setTextColor(80);
-  const kpis = [
-    ['Total Ingresos', `$${d.totalIngresos.toLocaleString()}`],
-    ['Efectivo',       `$${(d.totales.efectivo||0).toLocaleString()}`],
-    ['Tarjeta',        `$${(d.totales.tarjeta||0).toLocaleString()}`],
-    ['Transferencia',  `$${(d.totales.transferencia||0).toLocaleString()}`],
-    ['Crédito',        `${(d.totales.credito||0) < 0 ? '-$' : '$'}${Math.abs(d.totales.credito||0).toLocaleString()}`],
-    ['Total Gastos',   `$${d.totalGastos.toLocaleString()}`],
-    ['Utilidad Neta',  `$${d.utilidad.toLocaleString()}`],
-  ];
-  kpis.forEach(([label, val]) => {
-    doc.text(label + ':', 15, y);
-    doc.text(val, 195, y, { align: 'right' });
-    y += 7;
-  });
-
-  doc.line(15, y, 195, y);
-  y += 8;
 
   // Cobros
   doc.setFontSize(11);
@@ -341,6 +337,7 @@ async function descargarCajaPDF() {
       y = imprimirFilaCajaPDF(doc, `${nombre} — ${p.concepto || '—'}`, `$${parseFloat(p.total).toLocaleString()}`, y);
     });
   }
+  y = imprimirSubtotalCajaPDF(doc, 'Subtotal Cobros', d.subtotalPagos, y);
 
   y += 4;
   // Visitas
@@ -361,6 +358,7 @@ async function descargarCajaPDF() {
       y = imprimirFilaCajaPDF(doc, `${nombre} — Ses. ${v.numero_sesion}`, `$${parseFloat(v.monto_cobrado).toLocaleString()}`, y);
     });
   }
+  y = imprimirSubtotalCajaPDF(doc, 'Subtotal Abonos de sesiones', d.subtotalVisitas, y);
 
   y += 4;
   // Abonos (Paquetes + Créditos)
@@ -383,6 +381,7 @@ async function descargarCajaPDF() {
       y = imprimirFilaCajaPDF(doc, texto, `$${parseFloat(a.monto).toLocaleString()}`, y);
     });
   }
+  y = imprimirSubtotalCajaPDF(doc, 'Subtotal Abonos a adeudos', d.subtotalAbonos, y);
   if (y > 270) { doc.addPage(); y = 20; }
 
   y += 4;
@@ -396,6 +395,19 @@ async function descargarCajaPDF() {
   (d.gastos || []).forEach(g => {
     y = imprimirFilaCajaPDF(doc, `${g.categoria} — ${g.descripcion}`, `$${parseFloat(g.monto).toLocaleString()}`, y);
   });
+  y = imprimirSubtotalCajaPDF(doc, 'Subtotal Gastos', d.subtotalGastos, y);
+
+  // Total Global
+  if (y > 265) { doc.addPage(); y = 20; }
+  y += 3;
+  doc.setDrawColor(201, 168, 108);
+  doc.line(15, y, 195, y);
+  y += 8;
+  doc.setFontSize(13);
+  doc.setTextColor(201, 168, 108);
+  doc.text('Total Global de Caja', 15, y);
+  doc.text(`${d.totalGlobal < 0 ? '-$' : '$'}${Math.abs(d.totalGlobal).toLocaleString()}`, 195, y, { align: 'right' });
+  y += 10;
 
   // Footer
   doc.setFontSize(8);

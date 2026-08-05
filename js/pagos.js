@@ -10,7 +10,7 @@ let suplCounter = 0;
 
 // ── INICIALIZAR PAGOS ──
 async function initPagos() {
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaHoyISO();
   document.getElementById('pago-fecha').value = hoy;
   await cargarSelectPacientesPagos();
   await cargarSelectTratamientosPagos();
@@ -97,6 +97,7 @@ function recalcPago() {
   document.getElementById('tot-medic').textContent = '$' + totalMedics.toLocaleString();
   document.getElementById('tot-supl').textContent  = '$' + totalSupls.toLocaleString();
   document.getElementById('tot-total').textContent = '$' + total.toLocaleString();
+  recalcMetodos();
 }
 
 // ── MÉTODO DE PAGO ──
@@ -278,9 +279,25 @@ async function registrarCobro() {
   const total      = totalTrats + totalMedics + totalSupls;
   const concepto   = [...tratItems.map(t => t.nombre), ...medicItems.map(m => m.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
-  const metodoPago  = obtenerMetodosPago();
-  const tipoCobro   = document.querySelector('input[name="tipo-cobro"]:checked')?.value || 'contado';
-  const esCredito   = tipoCobro === 'credito';
+  const metodoPago     = obtenerMetodosPago();
+  const metodoDetalle  = obtenerMetodosPagoDetalle();
+  const montoPagado    = metodoDetalle.reduce((s, m) => s + m.monto, 0);
+  const tipoCobro      = document.querySelector('input[name="tipo-cobro"]:checked')?.value || 'contado';
+  const esCredito      = tipoCobro === 'credito';
+  const saldoPendiente = Math.max(0, total - montoPagado);
+
+  // "Contado" implica que se cubre el total; si el monto capturado en
+  // Método de pago no alcanza, la nota quedaría incongruente (total distinto
+  // a lo realmente cobrado) sin dejar rastro del adeudo. Se pide corregir el
+  // monto o cambiar a "A crédito".
+  if (!esCredito && Math.abs(montoPagado - total) > 0.5) {
+    showToast('⚠ El monto en Método de pago no coincide con el total. Ajústalo o marca "A crédito".');
+    return;
+  }
+  if (esCredito && montoPagado > total + 0.5) {
+    showToast('⚠ El monto capturado en Método de pago supera el total del cobro');
+    return;
+  }
 
   const datos = {
     paciente_id:        pacienteId,
@@ -296,8 +313,24 @@ async function registrarCobro() {
     folio:              folio,
   };
 
-  const { error } = await db.from('pagos').insert([datos]);
+  const { data: pagoInsertado, error } = await db.from('pagos').insert([datos]).select('id').single();
   if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  // Si es a crédito y el paciente dejó un pago inicial (parcial), se
+  // registra de inmediato como abono contra ESTE cobro para que el saldo
+  // pendiente en Créditos & Adeudos ya refleje total - pago inicial, en
+  // lugar del total completo como si no se hubiera pagado nada.
+  if (esCredito && montoPagado > 0 && pagoInsertado?.id) {
+    const abonosIniciales = metodoDetalle.map(m => ({
+      paciente_id: pacienteId,
+      pago_id:     pagoInsertado.id,
+      monto:       m.monto,
+      metodo_pago: m.metodo,
+      fecha:       fecha,
+      referencia:  'Pago inicial al momento de la venta',
+    }));
+    await db.from('abonos').insert(abonosIniciales);
+  }
 
   // Descontar stock de cada medicamento y suplemento/proteína
   for (const s of [...medicItems, ...suplItems]) {
@@ -311,7 +344,7 @@ async function registrarCobro() {
   }
 
   // Si es crédito, actualizar módulo créditos
-  if (metodoSeleccionado === 'credito' && typeof initCreditos === 'function') {
+  if (esCredito && typeof initCreditos === 'function') {
     const modCreditos = document.getElementById('mod-creditos');
     if (modCreditos?.classList.contains('active')) initCreditos();
   }
@@ -326,7 +359,17 @@ async function registrarCobro() {
     ...medicItems.map(m => ({ concepto: `${m.nombre} x${m.qty}`, monto: m.monto })),
     ...suplItems.map(s => ({ concepto: `${s.nombre} x${s.qty}`, monto: s.monto }))
   ];
-  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito' };
+  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
+
+  // Fila de pago: si es a crédito, mostrar Pagado + Saldo pendiente (para
+  // que la nota sea congruente con el adeudo real que queda registrado);
+  // si es contado, el método de pago ya cubre el total.
+  const filaPagoNota = esCredito
+    ? `
+      <div class="nota-row" style="font-size:12px"><span>Pagado</span><span>${metodoDetalle.length > 0 ? metodoDetalle.map(m => `${metodoLabel[m.metodo] || m.metodo} $${m.monto.toLocaleString()}`).join(' + ') : '$0'}</span></div>
+      <div class="nota-row" style="font-size:13px;color:#e74c3c"><span><strong>Saldo pendiente (a crédito)</strong></span><span><strong>$${saldoPendiente.toLocaleString()}</strong></span></div>`
+    : `
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoPago.includes('|') ? metodoPago.split('|').map(m => { const [met,mon] = m.split(':'); return `${met} $${parseFloat(mon).toLocaleString()}`; }).join(' + ') : (metodoLabel[metodoPago] || metodoPago)}</span></div>`;
 
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
@@ -340,7 +383,7 @@ async function registrarCobro() {
       ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
       <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${total.toLocaleString()}</strong></span></div>
-      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoPago.includes('|') ? metodoPago.split('|').map(m => { const [met,mon] = m.split(':'); return `${met} $${parseFloat(mon).toLocaleString()}`; }).join(' + ') : (metodoLabel[metodoPago] || metodoPago)}</span></div>
+      ${filaPagoNota}
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
@@ -376,7 +419,21 @@ async function cargarUltimosCobros() {
 
   if (error || !data) return;
   window._cobrosData = data;
-  renderCobros(data);
+
+  // Saldo pendiente de los cobros en crédito no liquidados que se van a
+  // mostrar, para poder pintarlo junto al Total (que siempre es el monto
+  // ORIGINAL de la venta y no debe modificarse: lo usan también Caja,
+  // Créditos y el recibo).
+  const idsCredito = data.filter(p => p.metodo_pago === 'credito' && !p.liquidado).map(p => p.id);
+  let abonosPorPago = {};
+  if (idsCredito.length > 0) {
+    const { data: abonos } = await db.from('abonos').select('pago_id, monto').in('pago_id', idsCredito);
+    (abonos || []).forEach(a => {
+      abonosPorPago[a.pago_id] = (abonosPorPago[a.pago_id] || 0) + parseFloat(a.monto || 0);
+    });
+  }
+
+  renderCobros(data, abonosPorPago);
 }
 
 // ── FILTRO POR FECHA (consulta directo a Supabase) ──
@@ -391,7 +448,7 @@ function buscarCobrosPorConcepto() {
   cobrosConceptoTimeout = setTimeout(() => cargarUltimosCobros(), 400);
 }
 
-function renderCobros(data) {
+function renderCobros(data, abonosPorPago = {}) {
   const tbody = document.getElementById('tabla-ultimos-cobros');
   if (!tbody) return;
 
@@ -405,12 +462,17 @@ function renderCobros(data) {
     const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
     const badge  = metBadge[p.metodo_pago] || 'badge-gray';
     const fecha  = p.fecha ? new Date(p.fecha+'T12:00:00').toLocaleDateString('es-MX', {day:'2-digit',month:'short'}) : '—';
+    const esCreditoPendiente = p.metodo_pago === 'credito' && !p.liquidado;
+    const saldo = esCreditoPendiente ? Math.max(0, parseFloat(p.total || 0) - (abonosPorPago[p.id] || 0)) : 0;
     return `<tr>
       <td style="font-size:12px;opacity:.6">${fecha}</td>
       <td>${nombre}</td>
       <td style="font-size:12px;opacity:.7">${p.concepto || '—'}</td>
       <td><span class="badge ${badge}">${p.metodo_pago || '—'}</span></td>
-      <td style="color:var(--gold);font-weight:500">$${parseFloat(p.total).toLocaleString()}</td>
+      <td style="color:var(--gold);font-weight:500">
+        $${parseFloat(p.total).toLocaleString()}
+        ${esCreditoPendiente && saldo > 0.5 ? `<div style="font-size:10px;color:#e74c3c;font-weight:500">Saldo: $${saldo.toLocaleString()}</div>` : ''}
+      </td>
       <td style="display:flex;gap:4px">
       <button class="tb-btn" style="padding:4px 8px;font-size:10px" onclick="reimprimirCobro(\`${p.id}\`)">🖨</button>
       <button class="tb-btn danger" style="padding:4px 8px;font-size:10px;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c" onclick="eliminarCobro(\`${p.id}\`)">✕</button>
@@ -467,13 +529,13 @@ function limpiarFormPago() {
   const tpnEl = document.getElementById('tot-pendiente');
   if (tpEl) tpEl.textContent = '$0';
   if (tpnEl) tpnEl.textContent = '$0';
-  
-  
+
+
   // Resetear tipo de cobro
   const contado = document.getElementById('cobro-contado');
   if (contado) contado.checked = true;
 
-
+  actualizarTipoCobroDisponible(0, 0);
 }
 
 // ── REIMPRIMIR COBRO ──
@@ -486,7 +548,7 @@ async function reimprimirCobro(id) {
 
   if (error || !p) { showToast('❌ Error al cargar cobro'); return; }
 
-  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito' };
+  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
   const detalles = [];
   if (p.monto_consulta > 0)     detalles.push({ concepto: 'Consulta', monto: p.monto_consulta });
   if (p.monto_tratamiento > 0)  detalles.push({ concepto: 'Tratamiento', monto: p.monto_tratamiento });
@@ -494,6 +556,26 @@ async function reimprimirCobro(id) {
   if (p.monto_suplementos > 0)  detalles.push({ concepto: 'Suplementos / Proteínas', monto: p.monto_suplementos });
 
   const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
+
+  // Si es un cobro a crédito, traer los abonos aplicados a ESTE cobro
+  // (incluye el pago inicial capturado al momento de la venta, si lo hubo)
+  // para reimprimir con el Pagado / Saldo pendiente ACTUALIZADOS, igual
+  // que se ve en la nota original y en Últimos Cobros.
+  let filaPagoNota;
+  if (p.metodo_pago === 'credito') {
+    const { data: abonos } = await db.from('abonos').select('monto, metodo_pago').eq('pago_id', p.id);
+    const pagado = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+    const saldo  = Math.max(0, parseFloat(p.total || 0) - pagado);
+    const pagadoTexto = (abonos && abonos.length > 0)
+      ? abonos.map(a => `${metodoLabel[a.metodo_pago] || a.metodo_pago} $${parseFloat(a.monto).toLocaleString()}`).join(' + ')
+      : '$0';
+    filaPagoNota = `
+      <div class="nota-row" style="font-size:12px"><span>Pagado</span><span>${pagadoTexto}</span></div>
+      <div class="nota-row" style="font-size:13px;color:#e74c3c"><span><strong>Saldo pendiente (a crédito)</strong></span><span><strong>$${saldo.toLocaleString()}</strong></span></div>`;
+  } else {
+    filaPagoNota = `
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>`;
+  }
 
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
@@ -507,8 +589,7 @@ async function reimprimirCobro(id) {
       ${detalles.map(d => `<div class="nota-row"><span>${d.concepto}</span><span>$${parseFloat(d.monto).toLocaleString()}</span></div>`).join('')}
       <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       <div class="nota-row total-row"><span>TOTAL</span><span><strong>$${parseFloat(p.total).toLocaleString()}</strong></span></div>
-      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>
-      <div class="nota-row" style="font-size:12px"><span>Tipo de cobro</span><span style="color:${p.liquidado === false ? '#e74c3c' : '#27AE60'}">${p.liquidado === false ? '📋 A crédito' : '✅ Contado'}</span></div>
+      ${filaPagoNota}
       <div class="nota-firma">
         <div><div class="nota-linea">Recibió</div></div>
         <div><div class="nota-linea">Paciente</div></div>
@@ -547,6 +628,35 @@ function recalcMetodos() {
   document.getElementById('tot-pagado').textContent    = '$' + totalPagado.toLocaleString();
   document.getElementById('tot-pendiente').textContent = '$' + pendiente.toLocaleString();
   document.getElementById('tot-pendiente').style.color = pendiente > 0 ? '#e74c3c' : '#27AE60';
+
+  actualizarTipoCobroDisponible(totalCobro, totalPagado);
+}
+
+// Si lo capturado en Método de pago no cubre el Total, "Contado" no tiene
+// sentido (el cobro quedaría con saldo sin dejar rastro del adeudo, como
+// pasaba antes de este ajuste): se fuerza "A crédito" y se bloquea Contado
+// hasta que Total y Monto pagado coincidan.
+function actualizarTipoCobroDisponible(totalCobro, totalPagado) {
+  const contadoRadio = document.getElementById('cobro-contado');
+  const creditoRadio = document.getElementById('cobro-credito');
+  const contadoLabel = document.getElementById('cobro-contado-label');
+  const aviso        = document.getElementById('cobro-aviso');
+  if (!contadoRadio || !creditoRadio) return;
+
+  const coincide = Math.abs(totalCobro - totalPagado) <= 0.5;
+
+  if (!coincide) {
+    if (contadoRadio.checked) creditoRadio.checked = true;
+    contadoRadio.disabled = true;
+    if (contadoLabel) contadoLabel.style.opacity = '.35';
+    if (contadoLabel) contadoLabel.style.cursor  = 'not-allowed';
+    if (aviso) aviso.style.display = '';
+  } else {
+    contadoRadio.disabled = false;
+    if (contadoLabel) contadoLabel.style.opacity = '.8';
+    if (contadoLabel) contadoLabel.style.cursor  = 'pointer';
+    if (aviso) aviso.style.display = 'none';
+  }
 }
 
 
@@ -558,6 +668,21 @@ function obtenerMetodosPago() {
     if (monto > 0) metodos.push(`${sel.value}:${monto}`);
   });
   return metodos.length === 1 ? metodos[0].split(':')[0] : metodos.join('|');
+}
+
+// Igual que obtenerMetodosPago() pero como arreglo {metodo, monto}, y sin la
+// opción "credito" (que en este selector solo marca "esta parte queda a
+// deber", no es un pago real recibido). Se usa para saber cuánto dinero
+// ENTRÓ de verdad hoy cuando el cobro se registra "a crédito", y así poder
+// generar el abono inicial correspondiente.
+function obtenerMetodosPagoDetalle() {
+  const detalle = [];
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach((sel, i) => {
+    const montos = document.querySelectorAll('#metodos-pago-container .metodo-monto');
+    const monto  = parseFloat(montos[i]?.value || 0);
+    if (monto > 0 && sel.value !== 'credito') detalle.push({ metodo: sel.value, monto });
+  });
+  return detalle;
 }
 
 
