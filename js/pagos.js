@@ -688,6 +688,18 @@ function obtenerMetodosPagoDetalle() {
 
 // ── ELIMINAR COBRO ──
 async function eliminarCobro(id) {
+  // Si el cobro tiene abonos ligados (pago_id), eliminarlo los dejaría
+  // "huérfanos": seguirían apareciendo en el Historial de Créditos & Adeudos
+  // pero ya no se restarían de ningún saldo (el dinero recibido desaparecería
+  // de la contabilidad del adeudo). Se bloquea hasta reasignar/eliminar esos
+  // abonos primero.
+  const { data: abonosLigados } = await db.from('abonos').select('id, monto').eq('pago_id', id);
+  if (abonosLigados && abonosLigados.length > 0) {
+    const total = abonosLigados.reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+    showToast(`⚠ Este cobro tiene ${abonosLigados.length} abono(s) por $${total.toLocaleString()} ligado(s). Reasígnalos o elimínalos antes de borrar el cobro.`);
+    return;
+  }
+
   if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación y se recalculará el saldo del paciente si era un cobro en crédito.')) return;
 
   const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');

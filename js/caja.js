@@ -111,13 +111,11 @@ async function cargarCaja(fecha) {
   const subtotalVisitas = (visitas || []).reduce((s, v) => s + parseFloat(v.monto_cobrado || 0), 0);
   const subtotalAbonos  = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
   const subtotalGastos  = totalGastos;
-  const totalGlobal     = subtotalPagos + subtotalVisitas + subtotalAbonos - subtotalGastos;
 
   const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setTexto('caja-subtotal-pagos',   '$' + subtotalPagos.toLocaleString());
   setTexto('caja-subtotal-visitas', '$' + subtotalVisitas.toLocaleString());
   setTexto('caja-subtotal-abonos',  '$' + subtotalAbonos.toLocaleString());
-  setTexto('caja-total-global',     (totalGlobal < 0 ? '-$' : '$') + Math.abs(totalGlobal).toLocaleString());
 
   // ── Tabla Pagos ──
   const tbPagos = document.getElementById('caja-tabla-pagos');
@@ -224,7 +222,7 @@ async function cargarCaja(fecha) {
   setTexto('caja-subtotal-gastos', '$' + subtotalGastos.toLocaleString());
 
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos, totalGlobal };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -397,17 +395,8 @@ async function descargarCajaPDF() {
   });
   y = imprimirSubtotalCajaPDF(doc, 'Subtotal Gastos', d.subtotalGastos, y);
 
-  // Total Global
   if (y > 265) { doc.addPage(); y = 20; }
   y += 3;
-  doc.setDrawColor(201, 168, 108);
-  doc.line(15, y, 195, y);
-  y += 8;
-  doc.setFontSize(13);
-  doc.setTextColor(201, 168, 108);
-  doc.text('Total Global de Caja', 15, y);
-  doc.text(`${d.totalGlobal < 0 ? '-$' : '$'}${Math.abs(d.totalGlobal).toLocaleString()}`, 195, y, { align: 'right' });
-  y += 10;
 
   // Footer
   doc.setFontSize(8);
