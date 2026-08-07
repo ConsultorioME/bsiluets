@@ -632,31 +632,45 @@ function recalcMetodos() {
   actualizarTipoCobroDisponible(totalCobro, totalPagado);
 }
 
-// Si lo capturado en Método de pago no cubre el Total, "Contado" no tiene
-// sentido (el cobro quedaría con saldo sin dejar rastro del adeudo, como
-// pasaba antes de este ajuste): se fuerza "A crédito" y se bloquea Contado
-// hasta que Total y Monto pagado coincidan.
+// El tipo de cobro ya no lo elige el capturista: lo decide el sistema según
+// lo capturado en Método de pago vs. el Total, para evitar que se marque
+// "Contado" con un pago incompleto (o "A crédito" con el total ya cubierto).
+//   - Pagado == Total  -> "Contado" (automático)
+//   - Pagado <  Total  -> "A crédito" (automático)
+//   - Pagado >  Total  -> sobrepago: se avisa y se bloquea Registrar Cobro
 function actualizarTipoCobroDisponible(totalCobro, totalPagado) {
   const contadoRadio = document.getElementById('cobro-contado');
   const creditoRadio = document.getElementById('cobro-credito');
   const contadoLabel = document.getElementById('cobro-contado-label');
-  const aviso        = document.getElementById('cobro-aviso');
+  const aviso         = document.getElementById('cobro-aviso');
+  const btnRegistrar  = document.getElementById('btn-registrar-cobro');
   if (!contadoRadio || !creditoRadio) return;
 
-  const coincide = Math.abs(totalCobro - totalPagado) <= 0.5;
+  // Los radios quedan solo informativos: el capturista ya no puede elegir.
+  contadoRadio.disabled = true;
+  creditoRadio.disabled = true;
+  if (contadoLabel) { contadoLabel.style.opacity = '.6'; contadoLabel.style.cursor = 'not-allowed'; }
 
-  if (!coincide) {
-    if (contadoRadio.checked) creditoRadio.checked = true;
-    contadoRadio.disabled = true;
-    if (contadoLabel) contadoLabel.style.opacity = '.35';
-    if (contadoLabel) contadoLabel.style.cursor  = 'not-allowed';
-    if (aviso) aviso.style.display = '';
-  } else {
-    contadoRadio.disabled = false;
-    if (contadoLabel) contadoLabel.style.opacity = '.8';
-    if (contadoLabel) contadoLabel.style.cursor  = 'pointer';
-    if (aviso) aviso.style.display = 'none';
+  const diff      = totalPagado - totalCobro;
+  const sobrepago = diff > 0.5;
+  const coincide  = Math.abs(diff) <= 0.5;
+
+  if (sobrepago) {
+    if (aviso) {
+      aviso.textContent   = '⚠ El monto capturado en Método de pago supera el Total del cobro. Corrige el monto antes de continuar.';
+      aviso.style.display = '';
+    }
+    if (btnRegistrar) btnRegistrar.disabled = true;
+    return;
   }
+
+  if (coincide) {
+    contadoRadio.checked = true;
+  } else {
+    creditoRadio.checked = true;
+  }
+  if (aviso) aviso.style.display = 'none';
+  if (btnRegistrar) btnRegistrar.disabled = false;
 }
 
 
