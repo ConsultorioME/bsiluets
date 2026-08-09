@@ -11,6 +11,19 @@ async function initCaja() {
   await cargarCaja(fecha);
 }
 
+// Desglosa un metodo_pago combinado (ej. "efectivo:700|transferencia:910")
+// en un texto legible por método para mostrar como tooltip del monto total,
+// p.ej. "Efectivo $700.00 · Transferencia $910.00". Devuelve '' si el pago
+// no es combinado (un solo método), para no mostrar tooltip en ese caso.
+function desgloseMetodoPago(metodo_pago) {
+  if (!metodo_pago || !metodo_pago.includes('|')) return '';
+  return metodo_pago.split('|').map(parte => {
+    const [met, mon] = parte.split(':');
+    const nombre = met ? met.charAt(0).toUpperCase() + met.slice(1).toLowerCase() : '—';
+    return `${nombre} $${parseFloat(mon || 0).toFixed(2)}`;
+  }).join(' · ');
+}
+
 // Etiqueta de tipo de abono, derivada de las columnas reales de la fila
 // (paquete_id / pago_id), no del texto libre de "referencia" que el
 // usuario puede sobreescribir al capturar el abono.
@@ -59,21 +72,22 @@ async function cargarCaja(fecha) {
   const totales = { efectivo: 0, tarjeta: 0, credito: 0, transferencia: 0 };
 
   // Parsear métodos combinados (ej. "efectivo:2000|tarjeta:3000")
-  function parsearMetodo(metodo_pago, monto_total) {
+  function parsearMetodo(metodo_pago, monto_total, destino) {
+    destino = destino || totales;
     if (!metodo_pago) return;
     if (metodo_pago.includes('|')) {
       metodo_pago.split('|').forEach(parte => {
         const [met, mon] = parte.split(':');
         const m = met?.toLowerCase().trim();
-        if (totales[m] !== undefined) totales[m] += parseFloat(mon || 0);
+        if (destino[m] !== undefined) destino[m] += parseFloat(mon || 0);
       });
     } else if (metodo_pago.includes(':')) {
       const [met, mon] = metodo_pago.split(':');
       const m = met?.toLowerCase().trim();
-      if (totales[m] !== undefined) totales[m] += parseFloat(mon || 0);
+      if (destino[m] !== undefined) destino[m] += parseFloat(mon || 0);
     } else {
       const m = metodo_pago?.toLowerCase().trim();
-      if (totales[m] !== undefined) totales[m] += parseFloat(monto_total || 0);
+      if (destino[m] !== undefined) destino[m] += parseFloat(monto_total || 0);
     }
   }
 
@@ -97,6 +111,16 @@ async function cargarCaja(fecha) {
     }
   });
 
+  // Totales "de caja física" — todo el dinero que efectivamente entró por
+  // cada método ese día, incluyendo abonos a créditos (a diferencia de
+  // `totales`, que los excluye para no duplicarlos en Total Ingresos/
+  // Utilidad Neta, ver abajo). Estos son los que se muestran en los KPIs
+  // de Efectivo/Tarjeta/Transferencia/Crédito de Caja.
+  const totalesCaja = { ...totales };
+  (abonos || []).forEach(a => {
+    if (a.pago_id) parsearMetodo(a.metodo_pago, a.monto, totalesCaja);
+  });
+
   // Total ingresos = Efectivo + Tarjeta + Transferencia + Crédito (lo
   // registrado como "a crédito" en Pagos ese día) - Total gastos.
   const totalGastos   = (gastos || []).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
@@ -116,6 +140,11 @@ async function cargarCaja(fecha) {
   setTexto('caja-subtotal-pagos',   '$' + subtotalPagos.toLocaleString());
   setTexto('caja-subtotal-visitas', '$' + subtotalVisitas.toLocaleString());
   setTexto('caja-subtotal-abonos',  '$' + subtotalAbonos.toLocaleString());
+  setTexto('caja-efectivo',       '$' + totalesCaja.efectivo.toLocaleString());
+  setTexto('caja-tarjeta',        '$' + totalesCaja.tarjeta.toLocaleString());
+  setTexto('caja-transferencia',  '$' + totalesCaja.transferencia.toLocaleString());
+  setTexto('caja-credito',        '$' + (totalesCaja.credito || 0).toLocaleString());
+  setTexto('caja-gastos',         '$' + totalGastos.toLocaleString());
 
   // ── Tabla Pagos ──
   const tbPagos = document.getElementById('caja-tabla-pagos');
@@ -129,12 +158,16 @@ async function cargarCaja(fecha) {
         const metodo = p.metodo_pago?.includes('|') 
           ? p.metodo_pago.split('|').map(m => m.split(':')[0]).join('+')
           : p.metodo_pago?.split(':')[0] || '—';
-        const badge  = metBadge[metodo] || 'badge-gray';
+        const badge    = metBadge[metodo] || 'badge-gray';
+        const desglose = desgloseMetodoPago(p.metodo_pago);
+        const montoAttrs = desglose
+          ? ` title="${desglose}" style="color:var(--gold);font-weight:500;cursor:help;border-bottom:1px dashed rgba(201,168,108,.5)"`
+          : ` style="color:var(--gold);font-weight:500"`;
         return `<tr>
           <td>${nombre}</td>
           <td style="font-size:12px;opacity:.7">${p.concepto || '—'}</td>
           <td><span class="badge ${badge}" style="font-size:10px">${metodo}</span></td>
-          <td style="color:var(--gold);font-weight:500">$${parseFloat(p.total).toLocaleString()}</td>
+          <td${montoAttrs}>$${parseFloat(p.total).toLocaleString()}</td>
         </tr>`;
       }).join('');
     }
@@ -222,7 +255,7 @@ async function cargarCaja(fecha) {
   setTexto('caja-subtotal-gastos', '$' + subtotalGastos.toLocaleString());
 
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalesCaja, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -313,7 +346,31 @@ async function descargarCajaPDF() {
   doc.setDrawColor(201, 168, 108);
   doc.line(15, headerY + 13, 195, headerY + 13);
 
-  let y = headerY + 21;
+  let y = headerY + 22;
+
+  // Totales por método (mismo resumen que los KPIs de Caja en la app)
+  const totalesPDF = [
+    { label: 'Efectivo',      val: d.totalesCaja.efectivo,      color: [39, 174, 96]  },
+    { label: 'Tarjeta',       val: d.totalesCaja.tarjeta,       color: [41, 128, 185] },
+    { label: 'Transferencia', val: d.totalesCaja.transferencia, color: [155, 89, 182] },
+    { label: 'Crédito',       val: d.totalesCaja.credito || 0,  color: [230, 126, 34] },
+    { label: 'Gastos',        val: d.totalGastos,               color: [231, 76, 60]  },
+  ];
+  const colAncho = 180 / totalesPDF.length;
+  totalesPDF.forEach((t, i) => {
+    const x = 15 + colAncho * i + colAncho / 2;
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text(t.label.toUpperCase(), x, y, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setTextColor(t.color[0], t.color[1], t.color[2]);
+    doc.text('$' + Math.abs(t.val).toLocaleString(), x, y + 7, { align: 'center' });
+  });
+  y += 16;
+  doc.setDrawColor(201, 168, 108);
+  doc.line(15, y, 195, y);
+  y += 9;
+
   doc.setFontSize(10);
   doc.setTextColor(80);
 

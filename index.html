@@ -614,6 +614,13 @@
         <button class="tb-btn" onclick="initCaja()">🔄 Actualizar</button>
         <button class="tb-btn" onclick="descargarCajaPDF()">📄 Descargar PDF</button>
       </div>
+      <div class="kpi-grid" style="margin-bottom:20px">
+        <div class="kpi"><div class="kpi-label">💵 Efectivo</div><div class="kpi-val" id="caja-efectivo" style="color:#27AE60">—</div></div>
+        <div class="kpi"><div class="kpi-label">💳 Tarjeta</div><div class="kpi-val" id="caja-tarjeta" style="color:#2980B9">—</div></div>
+        <div class="kpi"><div class="kpi-label">🏦 Transferencia</div><div class="kpi-val" id="caja-transferencia" style="color:#9b59b6">—</div></div>
+        <div class="kpi"><div class="kpi-label">📲 Crédito</div><div class="kpi-val" id="caja-credito" style="color:#e67e22">—</div></div>
+        <div class="kpi"><div class="kpi-label">💸 Gastos</div><div class="kpi-val" id="caja-gastos" style="color:#e74c3c">—</div></div>
+      </div>
       <div class="dash-grid">
         <div class="card">
           <div class="card-title">Cobros del día (Pagos)</div>
@@ -635,7 +642,7 @@
       <div class="card" style="margin-top:20px">
         <div class="card-title">Abonos a adeudos (Créditos)</div>
         <table>
-          <tr><th>Paciente</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
+          <tr><th>Paciente</th><th>Tipo</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
           <tbody id="caja-tabla-abonos"></tbody>
         </table>
         <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:var(--gold);font-weight:600">Subtotal: <span id="caja-subtotal-abonos">$0</span></div>
