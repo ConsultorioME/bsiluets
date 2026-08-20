@@ -85,6 +85,7 @@ async function verPaciente(id) {
     .from('visitas')
     .select('*')
     .eq('paciente_id', id)
+    .eq('eliminado', false)
     .order('fecha', { ascending: false })
     .limit(10);
 

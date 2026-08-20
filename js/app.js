@@ -360,27 +360,54 @@ async function cargarEliminados() {
   const tbody = document.getElementById('tabla-eliminados');
   if (!tbody) return;
 
-  const { data, error } = await db
-    .from('pagos')
-    .select('*, pacientes(nombre, apellidos)')
-    .eq('eliminado', true)
-    .order('eliminado_at', { ascending: false });
+  const [{ data: cobros }, { data: notas }] = await Promise.all([
+    db.from('pagos')
+      .select('*, pacientes(nombre, apellidos)')
+      .eq('eliminado', true)
+      .order('eliminado_at', { ascending: false }),
+    db.from('visitas')
+      .select('*, pacientes(nombre, apellidos)')
+      .eq('eliminado', true)
+      .order('eliminado_at', { ascending: false }),
+  ]);
 
-  if (error || !data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;opacity:.3;padding:12px">Sin cobros eliminados</td></tr>`;
+  const filas = [
+    ...(cobros || []).map(p => ({
+      tipo:      'Cobro',
+      badge:     'badge-gray',
+      fecha:     p.fecha || '—',
+      nombre:    p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—',
+      concepto:  p.concepto || '—',
+      monto:     parseFloat(p.total) || 0,
+      por:       p.eliminado_por,
+      at:        p.eliminado_at,
+    })),
+    ...(notas || []).map(v => ({
+      tipo:      'Nota de visita',
+      badge:     'badge-blue',
+      fecha:     v.fecha || '—',
+      nombre:    v.pacientes ? `${v.pacientes.nombre} ${v.pacientes.apellidos}` : '—',
+      concepto:  `Sesión ${v.numero_sesion}${v.folio ? ' — ' + v.folio : ''}`,
+      monto:     parseFloat(v.monto_cobrado) || 0,
+      por:       v.eliminado_por,
+      at:        v.eliminado_at,
+    })),
+  ].sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;opacity:.3;padding:12px">Sin registros eliminados</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = data.map(p => {
-    const nombre    = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
-    const fechaCobro = p.fecha || '—';
-    const fechaElim  = p.eliminado_at ? new Date(p.eliminado_at).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  tbody.innerHTML = filas.map(f => {
+    const fechaElim = f.at ? new Date(f.at).toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
     return `<tr>
-      <td style="font-size:12px;opacity:.6">${fechaCobro}</td>
-      <td>${nombre}</td>
-      <td style="font-size:12px;opacity:.7">${p.concepto || '—'}</td>
-      <td style="color:#e74c3c">$${parseFloat(p.total).toLocaleString()}</td>
-      <td style="font-size:12px;color:var(--gold)">${p.eliminado_por || '—'}</td>
+      <td><span class="badge ${f.badge}" style="font-size:10px">${f.tipo}</span></td>
+      <td style="font-size:12px;opacity:.6">${f.fecha}</td>
+      <td>${f.nombre}</td>
+      <td style="font-size:12px;opacity:.7">${f.concepto}</td>
+      <td style="color:#e74c3c">$${f.monto.toLocaleString()}</td>
+      <td style="font-size:12px;color:var(--gold)">${f.por || '—'}</td>
       <td style="font-size:11px;opacity:.5">${fechaElim}</td>
     </tr>`;
   }).join('');

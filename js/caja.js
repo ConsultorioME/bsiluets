@@ -47,6 +47,7 @@ async function cargarCaja(fecha) {
     .from('visitas')
     .select('*, pacientes(nombre, apellidos), paquetes(tratamientos(nombre))')
     .eq('fecha', fecha)
+    .eq('eliminado', false)
     .gt('monto_cobrado', 0)
     .order('created_at', { ascending: true });
 

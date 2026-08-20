@@ -11,6 +11,16 @@ async function initCreditos() {
   await cargarCreditos();
 }
 
+// ── BÚSQUEDA (cliente, sobre datos ya cargados) ──
+let todosCreditosPacientes = [];
+function buscarCredito(valor) {
+  const q = (valor || '').trim().toLowerCase();
+  const filtrados = q
+    ? todosCreditosPacientes.filter(p => (p.nombre || '').toLowerCase().includes(q))
+    : todosCreditosPacientes;
+  renderTablaCreditos(filtrados);
+}
+
 async function cargarCreditos() {
   // 1. Cobros en crédito no liquidados ni eliminados
   const { data: cobrosCredito } = await db
@@ -74,6 +84,7 @@ async function cargarCreditos() {
   });
 
   const pacientes = Object.values(pacientesMap);
+  todosCreditosPacientes = pacientes;
 
   // KPIs — se calculan SOLO sobre quienes tienen deuda pendiente real (saldo
   // dinámico > 0), aunque la tabla de abajo siga mostrando a todos (incluyendo
@@ -91,7 +102,7 @@ async function cargarCreditos() {
   document.getElementById('kpi-cred-vencidos').textContent  = vencidos30;
 
   renderAlertasCredito(pacientesConDeuda);
-  renderTablaCreditos(pacientes);
+  buscarCredito(document.getElementById('busca-credito')?.value || '');
 }
 
 // ── ALERTAS ──

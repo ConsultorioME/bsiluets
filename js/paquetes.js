@@ -151,6 +151,7 @@ async function verDetallePaq(id) {
     .from('visitas')
     .select('*')
     .eq('paquete_id', id)
+    .eq('eliminado', false)
     .order('numero_sesion', { ascending: true });
 
   const saldo = p.precio_total - p.pagado;
@@ -228,7 +229,8 @@ async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
   const { data: restantes, error: errSel } = await db
     .from('visitas')
     .select('numero_sesion, monto_cobrado')
-    .eq('paquete_id', paqueteId);
+    .eq('paquete_id', paqueteId)
+    .eq('eliminado', false);
 
   if (errSel) { showToast('❌ Sesión eliminada, pero no se pudo recalcular el saldo'); return; }
 
@@ -583,6 +585,7 @@ async function cargarNotasHoy() {
     .from('visitas')
     .select('*, pacientes(id, nombre, apellidos), paquetes(precio_total, pagado, total_sesiones, tratamientos(nombre))')
     .eq('fecha', fecha)
+    .eq('eliminado', false)
     .order('created_at', { ascending: false });
 
   if (error || !data) {
@@ -666,11 +669,71 @@ function renderNotasFiltradas(notas) {
       </td>
       <td>${v.metodo_pago ? `<span class="badge badge-green">${formatearMetodoVis(v.metodo_pago)}</span>` : '<span class="badge badge-gray">—</span>'}</td>
       <td>${saldo <= 0 ? '<span class="badge badge-green">Liquidado</span>' : `<span class="badge badge-warn">$${saldo.toLocaleString()}</span>`}</td>
-      <td><button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="reimprimirNota(\`${v.id}\`)">🖨</button></td>
+      <td style="display:flex;gap:4px">
+        <button class="tb-btn" style="padding:4px 10px;font-size:10px" onclick="reimprimirNota(\`${v.id}\`)">🖨</button>
+        <button class="tb-btn danger" style="padding:4px 10px;font-size:10px" onclick="eliminarNotaDia(\`${v.id}\`)">🗑</button>
+      </td>
     </tr>`;
   }).join('');
 
   document.getElementById('subtotal-notas').textContent = '$' + subtotal.toLocaleString();
+}
+
+// ── ELIMINAR NOTA DEL DÍA (soft-delete: queda en Historial de Eliminaciones
+//    y se recalcula el saldo del paquete y los totales de Caja/Reportes) ──
+async function eliminarNotaDia(visitaId) {
+  const visita = todasLasNotas.find(v => v.id === visitaId);
+  if (!visita) { showToast('❌ No se encontró la nota'); return; }
+
+  const nombre = visita.pacientes ? `${visita.pacientes.nombre} ${visita.pacientes.apellidos}` : 'esta paciente';
+  const monto  = parseFloat(visita.monto_cobrado) || 0;
+  const avisoMonto = monto > 0
+    ? `\n\nEsta nota tiene un pago de $${monto.toLocaleString()} registrado. Al eliminarla, el saldo del paquete de ${nombre} se recalculará y ese monto YA NO se sumará en Caja ni en Reportes.`
+    : '';
+
+  const ok = confirm(
+    `¿Eliminar la nota del día de ${nombre} (Sesión ${visita.numero_sesion})?\n\n` +
+    `Esta acción AFECTARÁ LOS REGISTROS CONTABLES: se recalculará el saldo del paquete y, si tenía pago, se retirará de Caja y Reportes.` +
+    avisoMonto +
+    `\n\nQuedará un registro en el Historial de Eliminaciones (Configuración). Esta acción no se puede deshacer.`
+  );
+  if (!ok) return;
+
+  const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+  const { error } = await db.from('visitas').update({
+    eliminado:     true,
+    eliminado_por: usuario.usuario || 'admin',
+    eliminado_at:  new Date().toISOString(),
+  }).eq('id', visitaId);
+
+  if (error) { showToast('❌ Error al eliminar la nota: ' + error.message); return; }
+
+  // Recalcular pagado y sesion_actual del paquete a partir de las visitas
+  // vigentes (no eliminadas) — misma lógica que eliminarVisita().
+  if (visita.paquete_id) {
+    const { data: restantes } = await db
+      .from('visitas')
+      .select('numero_sesion, monto_cobrado')
+      .eq('paquete_id', visita.paquete_id)
+      .eq('eliminado', false);
+
+    const nuevoPagado       = (restantes || []).reduce((sum, v) => sum + (parseFloat(v.monto_cobrado) || 0), 0);
+    const nuevaSesionActual = (restantes || []).reduce((max, v) => Math.max(max, v.numero_sesion), 0);
+
+    await db.from('paquetes').update({
+      pagado: nuevoPagado,
+      sesion_actual: nuevaSesionActual,
+    }).eq('id', visita.paquete_id);
+  }
+
+  showToast('✓ Nota eliminada — contabilidad recalculada');
+
+  // Refrescar los módulos contables afectados
+  await cargarNotasHoy();
+  if (typeof cargarPaquetes === 'function')   await cargarPaquetes();
+  if (typeof cargarEliminados === 'function') await cargarEliminados();
+  if (typeof initCaja === 'function')         initCaja();
+  if (typeof initReportes === 'function')     initReportes();
 }
 
 function limpiarFiltrosNotas() {

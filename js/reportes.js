@@ -46,7 +46,8 @@ async function cargarReportes(year, month) {
     .from('visitas')
     .select('*, paquetes(tratamientos(nombre))')
     .gte('fecha', desde)
-    .lte('fecha', hasta);
+    .lte('fecha', hasta)
+    .eq('eliminado', false);
 
   // ── KPIs ──
   const ingresos   = pagos ? pagos.reduce((s, p) => s + parseFloat(p.total || 0), 0) : 0;
