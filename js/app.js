@@ -175,6 +175,16 @@ function logout(){
   document.getElementById('public-page').style.display='block';
 }
 
+// ─── SIDEBAR (cajón deslizable en celular) ───
+function toggleSidebar(){
+  document.querySelector('.sidebar')?.classList.toggle('open');
+  document.getElementById('sidebar-overlay')?.classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('open');
+}
+
 // ─── MODULES ───
 
 function showModule(id,el){
@@ -182,6 +192,7 @@ function showModule(id,el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('mod-'+id).classList.add('active');
   if(el)el.classList.add('active');
+  closeSidebar();
   const titles={dashboard:'Dashboard',agenda:'Agenda',pacientes:'Catálogo de Pacientes',tratamientos:'Tratamientos',inventario:'Suplementos / Inventario',pagos:'Pagos',paquetes:'Paquetes & Visitas',creditos:'Créditos & Adeudos',reportes:'Reportes',bot:'Bot / Chat',config:'Configuración'};
   document.getElementById('module-title').textContent=titles[id]||id;
   if(id==='dashboard')   initDashboard();

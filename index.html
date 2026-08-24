@@ -167,10 +167,14 @@
       </div>
     </div>
   </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
   <div class="admin-main">
     <div class="admin-topbar">
-      <span class="topbar-title" id="module-title">Dashboard</span>
+      <div style="display:flex;align-items:center;min-width:0">
+        <button class="menu-toggle" id="btn-menu-toggle" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
+        <span class="topbar-title" id="module-title">Dashboard</span>
+      </div>
       <div class="topbar-actions">
         <button class="tb-btn" onclick="openModal('nuevo-servicio')">+ Nueva Atención</button>
         <button class="tb-btn" onclick="openModal('nuevo-paciente')">+ Paciente</button>
