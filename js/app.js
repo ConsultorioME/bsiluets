@@ -4,12 +4,25 @@
 // ─────────────────────────────────────────
 
 
+// ─── SERVICE WORKER (permite "Agregar a pantalla de inicio") ───
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 // ─── INIT ADMIN ───
 function initAdmin() {
   cargarConfigConsultorio();
   cargarHorarioAtencion();
-  initDashboard();
-  showModule('dashboard', document.querySelector('.nav-item'));
+
+  let rol = 'recepcionista';
+  try { rol = (JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}').rol) || rol; } catch (e) {}
+
+  const landing = rol === 'doctora' ? 'agenda' : 'dashboard';
+  if (landing === 'dashboard') initDashboard();
+  const navEl = document.querySelector(`.nav-item[onclick*="showModule('${landing}'"]`) || document.querySelector('.nav-item');
+  showModule(landing, navEl);
 }
 
 // ─── DATOS DEL CONSULTORIO (dinámicos para Notas de Venta) ───
@@ -252,8 +265,8 @@ async function cargarUsuarios() {
 
   if (error || !data) return;
 
-  const rolBadge = { admin:'badge-gold', recepcionista:'badge-blue', capturista:'badge-gray' };
-  const rolLabel = { admin:'Administrador', recepcionista:'Recepcionista', capturista:'Capturista' };
+  const rolBadge = { admin:'badge-gold', recepcionista:'badge-blue', capturista:'badge-gray', doctora:'badge-gold' };
+  const rolLabel = { admin:'Administrador', recepcionista:'Recepcionista', capturista:'Capturista', doctora:'Doctora' };
 
   tbody.innerHTML = data.map(u => `<tr>
     <td>

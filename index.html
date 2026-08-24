@@ -6,6 +6,13 @@
 <title>B·Siluets — Consultorio Médico Estético</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B8935A">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="B·Siluets">
 <script src="js/supabase.min.js"></script>
 </head>
 <body>
@@ -216,21 +223,40 @@
           <button class="agenda-tab" onclick="selAgenda('Versa',this)">✨ Versa</button>
           <button class="agenda-tab" onclick="selAgenda('Depilación',this)">🪒 Depilación</button>
         </div>
-        <div class="agenda-week-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <button class="cal-nav" onclick="semanaNav(-1)">‹</button>
-            <span class="cal-month" id="semana-lbl">Semana</span>
-            <button class="cal-nav" onclick="semanaNav(1)">›</button>
-            <button class="tb-btn" onclick="irHoySemana()">Hoy</button>
-            <span id="resumen-semana" style="font-size:12px;margin-left:6px"></span>
+
+        <!-- Vista de escritorio: cuadrícula semanal -->
+        <div class="agenda-desktop">
+          <div class="agenda-week-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <button class="cal-nav" onclick="semanaNav(-1)">‹</button>
+              <span class="cal-month" id="semana-lbl">Semana</span>
+              <button class="cal-nav" onclick="semanaNav(1)">›</button>
+              <button class="tb-btn" onclick="irHoySemana()">Hoy</button>
+              <span id="resumen-semana" style="font-size:12px;margin-left:6px"></span>
+            </div>
+            <button class="tb-btn" id="btn-nueva-cita-desktop" onclick="abrirModalCita()">+ Nueva Cita</button>
           </div>
-          <button class="tb-btn" onclick="abrirModalCita()">+ Nueva Cita</button>
+          <div style="overflow-x:auto;background:var(--charcoal);border:1px solid rgba(201,168,108,.1)">
+            <div id="semana-grid"></div>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--cream);opacity:.4">
+            🟡 Pendiente &nbsp;·&nbsp; 🟢 Confirmada &nbsp;·&nbsp; 🔵 En sala &nbsp;·&nbsp; ⚪ Completada &nbsp;·&nbsp; 🔴 Cancelada &nbsp;·&nbsp; Clic en un espacio vacío para agendar
+          </div>
         </div>
-        <div style="overflow-x:auto;background:var(--charcoal);border:1px solid rgba(201,168,108,.1)">
-          <div id="semana-grid"></div>
-        </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--cream);opacity:.4">
-          🟡 Pendiente &nbsp;·&nbsp; 🟢 Confirmada &nbsp;·&nbsp; 🔵 En sala &nbsp;·&nbsp; ⚪ Completada &nbsp;·&nbsp; 🔴 Cancelada &nbsp;·&nbsp; Clic en un espacio vacío para agendar
+
+        <!-- Vista móvil: día en lista -->
+        <div class="agenda-mobile">
+          <div class="agenda-daynav">
+            <button class="agenda-daynav-btn" onclick="diaNav(-1)" aria-label="Día anterior">‹</button>
+            <div class="agenda-daynav-lbl" onclick="irHoySemana()">
+              <div class="d1" id="dia-nav-fecha">Hoy</div>
+              <div class="d2" id="dia-nav-dia">—</div>
+            </div>
+            <button class="agenda-daynav-btn" onclick="diaNav(1)" aria-label="Día siguiente">›</button>
+          </div>
+          <div class="agenda-weekstrip" id="agenda-weekstrip"></div>
+          <div id="dia-lista" class="agenda-daylist"></div>
+          <button class="tb-btn agenda-fab" id="btn-nueva-cita-mobile" onclick="abrirModalCitaParaFecha(diaActivo)">+ Nueva Cita</button>
         </div>
       </div>
 
@@ -1280,6 +1306,7 @@
         <option value="admin">Administrador</option>
         <option value="recepcionista">Recepcionista</option>
         <option value="capturista">Capturista</option>
+        <option value="doctora">Doctora (solo Agenda, lectura)</option>
       </select>
     </div>
     <div class="modal-actions">

@@ -11,9 +11,31 @@ const ROW_H       = 52;  // px por hora
 // ── ESTADO ──
 let agendaActiva  = 'Dra. Bianca Salas';
 let semanaInicio  = getLunesSemana(new Date());
+let diaActivo     = fmtFecha(new Date()); // día mostrado en la vista móvil (lista)
 
 let fechasBloqueadasSet = new Set();
 window._fechasBloqueadasData = {};
+
+let _citasPorDiaCache    = {};
+let _bloqueosPorDiaCache = {};
+
+// ── ROL DE SOLO LECTURA (p. ej. la doctora, que solo consulta su agenda) ──
+function esRolSoloLectura() {
+  try {
+    const u = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+    return u.rol === 'doctora';
+  } catch (e) {
+    return false;
+  }
+}
+
+// ── FORMATO DE HORA 12H (para la lista del día) ──
+function formatHora12(hhmm) {
+  if (!hhmm) return { h: '--:--', ampm: '' };
+  const [hh, mm] = hhmm.substring(0, 5).split(':').map(Number);
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return { h: `${h12}:${String(mm).padStart(2, '0')}`, ampm: hh < 12 ? 'AM' : 'PM' };
+}
 
 // ── HELPERS DE FECHAS ──
 function getLunesSemana(d) {
@@ -99,7 +121,11 @@ function selAgenda(tipo, el) {
 
 // ── INICIALIZAR AGENDA ──
 async function initAgenda() {
-  await cargarSelectsPacientesTratamientos();
+  const soloLectura = esRolSoloLectura();
+  const btnDesktop = document.getElementById('btn-nueva-cita-desktop');
+  if (btnDesktop) btnDesktop.style.display = soloLectura ? 'none' : '';
+
+  if (!soloLectura) await cargarSelectsPacientesTratamientos();
   await cargarCitasSemana();
 }
 
@@ -111,7 +137,30 @@ function semanaNav(dir) {
 
 function irHoySemana() {
   semanaInicio = getLunesSemana(new Date());
+  diaActivo    = fmtFecha(new Date());
   cargarCitasSemana();
+}
+
+// ── NAVEGACIÓN DE DÍA (vista móvil) ──
+function diaNav(dir) {
+  const d = new Date(diaActivo + 'T12:00:00');
+  d.setDate(d.getDate() + dir);
+  const nuevaFecha = fmtFecha(d);
+  const nuevoLunes  = getLunesSemana(d);
+
+  if (fmtFecha(nuevoLunes) !== fmtFecha(semanaInicio)) {
+    semanaInicio = nuevoLunes;
+    diaActivo    = nuevaFecha;
+    cargarCitasSemana(); // el día cayó fuera de la semana cargada: recarga
+  } else {
+    diaActivo = nuevaFecha;
+    renderVistaMovil(_citasPorDiaCache, _bloqueosPorDiaCache); // misma semana: solo repinta
+  }
+}
+
+function seleccionarDia(fecha) {
+  diaActivo = fecha;
+  renderVistaMovil(_citasPorDiaCache, _bloqueosPorDiaCache);
 }
 
 // ── CARGAR CITAS + BLOQUEOS DE LA SEMANA VISIBLE ──
@@ -154,7 +203,14 @@ async function cargarCitasSemana() {
     citasPorDia[c.fecha].push(c);
   });
 
+  // Si el día activo de la vista móvil quedó fuera de la semana visible, se ajusta al lunes
+  if (!dias.some(d => fmtFecha(d) === diaActivo)) diaActivo = fmtFecha(dias[0]);
+
+  _citasPorDiaCache    = citasPorDia;
+  _bloqueosPorDiaCache = bloqueosPorDia;
+
   renderSemanaGrid(citasPorDia, bloqueosPorDia);
+  renderVistaMovil(citasPorDia, bloqueosPorDia);
 
   const resumen = document.getElementById('resumen-semana');
   if (resumen) {
@@ -202,6 +258,8 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
     cancelada:  '#e74c3c',
   };
 
+  const soloLectura = esRolSoloLectura();
+
   const colsHTML = dias.map(d => {
     const fecha  = fmtFecha(d);
     const esHoy  = fecha === hoyStr;
@@ -219,9 +277,10 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
       const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : 'Sin paciente';
       const trat   = c.tratamientos?.nombre || '';
       const horaTxt = c.hora?.substring(0, 5) || '';
-      return `<div onclick="event.stopPropagation();editarCita('${c.id}')"
+      const clickAttr = soloLectura ? '' : `onclick="event.stopPropagation();editarCita('${c.id}')"`;
+      return `<div ${clickAttr}
                 title="${horaTxt} — ${nombre} — ${trat}"
-                style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:pointer;font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Inter',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
+                style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:${soloLectura ? 'default' : 'pointer'};font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Inter',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
                 <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${horaTxt} ${nombre}</strong>
                 <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">${trat}</span>
               </div>`;
@@ -246,8 +305,8 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
           <div style="font-size:10px;letter-spacing:.1em;color:var(--gold);opacity:.6">${nombresDia[d.getDay()]}</div>
           <div style="font-family:'Space Grotesk',sans-serif;font-size:19px;color:${esHoy ? 'var(--gold)' : 'var(--cream)'}">${d.getDate()}</div>
         </div>
-        <div onclick="crearCitaEnSlot(event,'${fecha}')"
-             style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(184,147,90,.18);cursor:${bloqueo ? 'not-allowed' : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(184,147,90,.13) 0, rgba(184,147,90,.13) 1px, transparent 1px, transparent ${ROW_H}px)">
+        <div ${soloLectura ? '' : `onclick="crearCitaEnSlot(event,'${fecha}')"`}
+             style="position:relative;height:${alturaTotal}px;border-left:1px solid rgba(184,147,90,.18);cursor:${(bloqueo || soloLectura) ? (soloLectura ? 'default' : 'not-allowed') : 'copy'};background-image:repeating-linear-gradient(to bottom, rgba(184,147,90,.13) 0, rgba(184,147,90,.13) 1px, transparent 1px, transparent ${ROW_H}px)">
           ${overlaysCerrado}
           ${bloques}
           ${overlayBloqueo}
@@ -264,8 +323,80 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
     </div>`;
 }
 
+// ── DIBUJAR LA VISTA MÓVIL (DÍA EN LISTA) ──
+function renderVistaMovil(citasPorDia, bloqueosPorDia) {
+  const navFecha = document.getElementById('dia-nav-fecha');
+  const navDia   = document.getElementById('dia-nav-dia');
+  const weekstrip = document.getElementById('agenda-weekstrip');
+  const lista     = document.getElementById('dia-lista');
+  const btnFab    = document.getElementById('btn-nueva-cita-mobile');
+  if (!navFecha || !lista) return;
+
+  const dias      = diasSemanaArray();
+  const hoyStr    = fmtFecha(new Date());
+  const nombresD  = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const nombresC  = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const meses     = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const soloLectura = esRolSoloLectura();
+
+  const fechaActivaDate = new Date(diaActivo + 'T12:00:00');
+  navFecha.textContent = diaActivo === hoyStr
+    ? `Hoy, ${fechaActivaDate.getDate()} de ${meses[fechaActivaDate.getMonth()]}`
+    : `${fechaActivaDate.getDate()} de ${meses[fechaActivaDate.getMonth()]}`;
+  navDia.textContent = nombresD[fechaActivaDate.getDay()];
+
+  // Tira de días de la semana
+  weekstrip.innerHTML = dias.map(d => {
+    const fecha = fmtFecha(d);
+    const clases = ['wchip'];
+    if (fecha === hoyStr) clases.push('today');
+    if (fecha === diaActivo) clases.push('selected');
+    if ((citasPorDia[fecha] || []).length > 0) clases.push('has-citas');
+    return `<button class="${clases.join(' ')}" onclick="seleccionarDia('${fecha}')">
+              <span class="wl">${nombresC[d.getDay()]}</span>
+              <span class="wn">${d.getDate()}</span>
+              <span class="wdot"></span>
+            </button>`;
+  }).join('');
+
+  // Lista de citas del día seleccionado
+  const bloqueo = bloqueosPorDia[diaActivo];
+  const citas   = (citasPorDia[diaActivo] || []);
+
+  if (bloqueo) {
+    const tipos = { vacaciones: 'Vacaciones', cierre: 'Cierre del consultorio', festivo: 'Día festivo', otro: 'Otro motivo' };
+    lista.innerHTML = `<div class="agenda-blocked">🔒 ${tipos[bloqueo.tipo] || bloqueo.tipo}<br>${bloqueo.razon}</div>`;
+  } else if (citas.length === 0) {
+    lista.innerHTML = `<div class="agenda-empty">Sin citas este día</div>`;
+  } else {
+    lista.innerHTML = citas.map(c => {
+      const { h, ampm } = formatHora12(c.hora);
+      const color  = coloresEstadoLista[c.estado] || coloresEstadoLista.pendiente;
+      const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : 'Sin paciente';
+      const trat   = c.tratamientos?.nombre || '';
+      const clickAttr = soloLectura ? '' : `onclick="editarCita('${c.id}')"`;
+      return `<div class="appt-card" ${clickAttr}>
+                <div class="appt-time"><div class="h">${h}</div><div class="m">${ampm}</div></div>
+                <div class="appt-body"><div class="appt-name">${nombre}</div><div class="appt-trat">${trat}</div></div>
+                <div class="appt-status" style="background:${color}"></div>
+              </div>`;
+    }).join('');
+  }
+
+  if (btnFab) btnFab.style.display = (soloLectura || bloqueo) ? 'none' : '';
+}
+
+const coloresEstadoLista = {
+  pendiente:  '#E8B84B',
+  confirmada: '#27AE60',
+  en_sala:    '#2980B9',
+  completada: '#8a8a8a',
+  cancelada:  '#e74c3c',
+};
+
 // ── CREAR CITA AL DAR CLIC EN UN ESPACIO VACÍO DE LA CUADRÍCULA ──
 function crearCitaEnSlot(ev, fecha) {
+  if (esRolSoloLectura()) return;
   const bloqueo = verificarFechaBloqueada(fecha);
   if (bloqueo) {
     const tipos = { vacaciones: 'Vacaciones', cierre: 'Cierre del consultorio', festivo: 'Día festivo', otro: 'Otro motivo' };
@@ -295,23 +426,29 @@ function crearCitaEnSlot(ev, fecha) {
   openModal('nueva-cita');
 }
 
-// ── ABRIR MODAL DESDE EL BOTÓN "+ NUEVA CITA" ──
+// ── ABRIR MODAL DESDE EL BOTÓN "+ NUEVA CITA" (vista de escritorio) ──
 function abrirModalCita() {
-  limpiarFormCita();
   const hoy   = fmtFecha(new Date());
   const dias  = diasSemanaArray().map(fmtFecha);
   const fechaDefault = dias.includes(hoy) ? hoy : dias[0];
+  abrirModalCitaParaFecha(fechaDefault);
+}
 
-  const bloqueo = verificarFechaBloqueada(fechaDefault);
+// ── ABRIR MODAL DE NUEVA CITA PARA UNA FECHA ESPECÍFICA (usado por la vista móvil) ──
+function abrirModalCitaParaFecha(fecha) {
+  if (esRolSoloLectura()) return;
+  limpiarFormCita();
+
+  const bloqueo = verificarFechaBloqueada(fecha);
   if (bloqueo) {
     const tipos = { vacaciones: 'Vacaciones', cierre: 'Cierre del consultorio', festivo: 'Día festivo', otro: 'Otro motivo' };
     showToast(`⛔ No se pueden agendar citas — ${tipos[bloqueo.tipo] || bloqueo.tipo}: ${bloqueo.razon}`);
     return;
   }
 
-  document.getElementById('cita-fecha').value = fechaDefault;
+  document.getElementById('cita-fecha').value = fecha;
   document.getElementById('cita-hora').value  = '';
-  checkFechaBloqueada(fechaDefault);
+  checkFechaBloqueada(fecha);
   cargarSelectsPacientesTratamientos();
   openModal('nueva-cita');
 }
@@ -335,6 +472,7 @@ async function cargarSelectsPacientesTratamientos() {
 
 // ── GUARDAR CITA ──
 async function guardarCita() {
+  if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   const id = document.getElementById('cita-id').value;
   const datos = {
     paciente_id:    document.getElementById('cita-paciente').value    || null,
@@ -402,6 +540,7 @@ async function editarCita(id) {
 
 // ── ELIMINAR CITA DESDE EL MODAL DE EDICIÓN ──
 async function eliminarCitaDesdeModal() {
+  if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   const id = document.getElementById('cita-id').value;
   if (!id) return;
   if (!confirm('¿Seguro que quieres eliminar esta cita? Esta acción no se puede deshacer.')) return;
@@ -415,6 +554,7 @@ async function eliminarCitaDesdeModal() {
 
 // ── ELIMINAR CITA ──
 async function eliminarCita(id) {
+  if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   if (!confirm('¿Eliminar esta cita?')) return;
   const { error } = await db.from('agenda').delete().eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
@@ -436,6 +576,7 @@ function limpiarFormCita() {
 
 // ── FECHAS BLOQUEADAS ──
 async function guardarBloqueo() {
+  if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   const fechaIni = document.getElementById('bloqueo-fecha-ini').value;
   const fechaFin = document.getElementById('bloqueo-fecha-fin').value || fechaIni;
   const razon    = document.getElementById('bloqueo-razon').value.trim();
@@ -519,6 +660,7 @@ async function cargarFechasBloqueadasConfig() {
 }
 
 async function eliminarBloqueo(id) {
+  if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   if (!confirm('¿Eliminar este bloqueo?')) return;
   const { error } = await db.from('fechas_bloqueadas').delete().eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
