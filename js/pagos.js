@@ -299,6 +299,16 @@ async function registrarCobro() {
     return;
   }
 
+  // Desglose línea por línea (cada tratamiento/medicamento/suplemento por
+  // separado, con su nombre, cantidad y monto individual) para poder
+  // reimprimir la nota de venta con el mismo detalle que se ve al momento
+  // del cobro, en vez de solo los 3 montos agrupados.
+  const detalleItems = [
+    ...tratItems.map(t => ({ concepto: t.nombre, monto: t.precio })),
+    ...medicItems.map(m => ({ concepto: `${m.nombre} x${m.qty}`, monto: m.monto })),
+    ...suplItems.map(s => ({ concepto: `${s.nombre} x${s.qty}`, monto: s.monto }))
+  ];
+
   const datos = {
     paciente_id:        pacienteId,
     concepto:           concepto,
@@ -311,6 +321,7 @@ async function registrarCobro() {
     liquidado:          !esCredito,
     fecha:              fecha,
     folio:              folio,
+    detalle_items:      detalleItems,
   };
 
   const { data: pagoInsertado, error } = await db.from('pagos').insert([datos]).select('id').single();
@@ -354,11 +365,7 @@ async function registrarCobro() {
   // Nota de venta
   const selPac    = document.getElementById('pago-paciente');
   const nombrePac = selPac.options[selPac.selectedIndex]?.text || '—';
-  const detalles  = [
-    ...tratItems.map(t => ({ concepto: t.nombre, monto: t.precio })),
-    ...medicItems.map(m => ({ concepto: `${m.nombre} x${m.qty}`, monto: m.monto })),
-    ...suplItems.map(s => ({ concepto: `${s.nombre} x${s.qty}`, monto: s.monto }))
-  ];
+  const detalles  = detalleItems;
   const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
 
   // Fila de pago: si es a crédito, mostrar Pagado + Saldo pendiente (para
@@ -391,6 +398,7 @@ async function registrarCobro() {
       <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
+  document.getElementById('nota-impr-titulo').textContent = 'Nota de Venta';
   openModal('nota-impr');
   limpiarFormPago();
   await cargarUltimosCobros();
@@ -549,11 +557,18 @@ async function reimprimirCobro(id) {
   if (error || !p) { showToast('❌ Error al cargar cobro'); return; }
 
   const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
-  const detalles = [];
-  if (p.monto_consulta > 0)     detalles.push({ concepto: 'Consulta', monto: p.monto_consulta });
-  if (p.monto_tratamiento > 0)  detalles.push({ concepto: 'Tratamiento', monto: p.monto_tratamiento });
-  if (p.monto_medicamentos > 0) detalles.push({ concepto: 'Medicamentos', monto: p.monto_medicamentos });
-  if (p.monto_suplementos > 0)  detalles.push({ concepto: 'Suplementos / Proteínas', monto: p.monto_suplementos });
+
+  // Preferir el desglose línea por línea guardado al momento del cobro
+  // (nombre + cantidad de cada tratamiento/medicamento/suplemento). Los
+  // cobros anteriores a este cambio no lo tienen guardado, así que para
+  // esos se cae de vuelta a los 3 montos agrupados de siempre.
+  let detalles = Array.isArray(p.detalle_items) ? p.detalle_items : [];
+  if (detalles.length === 0) {
+    if (p.monto_consulta > 0)     detalles.push({ concepto: 'Consulta', monto: p.monto_consulta });
+    if (p.monto_tratamiento > 0)  detalles.push({ concepto: 'Tratamiento', monto: p.monto_tratamiento });
+    if (p.monto_medicamentos > 0) detalles.push({ concepto: 'Medicamentos', monto: p.monto_medicamentos });
+    if (p.monto_suplementos > 0)  detalles.push({ concepto: 'Suplementos / Proteínas', monto: p.monto_suplementos });
+  }
 
   const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
 
@@ -597,6 +612,7 @@ async function reimprimirCobro(id) {
       <div class="nota-footer-txt">B·Siluets — Consulta · Tratamiento · Bienestar</div>
     </div>`;
 
+  document.getElementById('nota-impr-titulo').textContent = 'Nota de Venta';
   openModal('nota-impr');
 }
 

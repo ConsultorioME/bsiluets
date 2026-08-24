@@ -286,6 +286,21 @@
               <div style="color:var(--cream);opacity:.6;margin-bottom:6px">🎂 <span id="perfil-edad">—</span></div>
               <div style="color:var(--cream);opacity:.6">📍 <span id="perfil-ciudad">—</span></div>
             </div>
+            <div style="background:var(--charcoal);border:1px solid rgba(201,168,108,.1);padding:16px;margin-top:12px;font-size:13px">
+              <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:12px">Adeudo total</div>
+              <div style="display:flex;justify-content:space-between;color:var(--cream);opacity:.6">
+                <span>Cobros a crédito</span><span id="perfil-adeudo-creditos">—</span>
+              </div>
+              <div id="perfil-adeudo-creditos-detalle" style="margin:2px 0 10px 8px"></div>
+              <div style="display:flex;justify-content:space-between;color:var(--cream);opacity:.6">
+                <span>Paquetes</span><span id="perfil-adeudo-paquetes">—</span>
+              </div>
+              <div id="perfil-adeudo-paquetes-detalle" style="margin:2px 0 10px 8px"></div>
+              <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(201,168,108,.15);padding-top:10px;font-weight:600">
+                <span style="color:var(--cream)">Total</span><span id="perfil-adeudo-total">—</span>
+              </div>
+              <button class="tb-btn" style="width:100%;margin-top:12px" onclick="generarNotaAdeudo()">🧾 Generar Adeudo Total</button>
+            </div>
           </div>
           <div>
             <div class="session-tracker">
@@ -1235,7 +1250,7 @@
 <div class="modal-overlay" id="modal-nota-impr">
   <div class="modal" style="max-width:500px">
     <button class="modal-close" onclick="closeModal('nota-impr');limpiarFormVisita()">×</button>
-    <div class="modal-title">Nota de Venta</div>
+    <div class="modal-title" id="nota-impr-titulo">Nota de Venta</div>
     <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.6;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,108,.1)">Vista de impresión</div>
     <div id="nota-imprimible"></div>
     <div class="modal-actions">

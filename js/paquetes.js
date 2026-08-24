@@ -518,6 +518,7 @@ async function generarNotaVis() {
 
   // 3. Mostrar nota en modal
   document.getElementById('nota-imprimible').innerHTML = document.getElementById('nota-preview-wrap').innerHTML;
+  document.getElementById('nota-impr-titulo').textContent = 'Nota de Venta';
   openModal('nota-impr');
   showToast('✓ Visita registrada — Sesión ' + nuevaSesion + ' de ' + paqSelData.total_sesiones);
 
@@ -558,6 +559,7 @@ async function reimprimirNota(visitaId) {
       <div class="nota-firma"><div><div class="nota-linea">Recibió</div></div><div><div class="nota-linea">Paciente</div></div></div>
       <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
     </div>`;
+  document.getElementById('nota-impr-titulo').textContent = 'Nota de Venta';
   openModal('nota-impr');
 }
 // ── FILTROS NOTAS DEL DÍA ──

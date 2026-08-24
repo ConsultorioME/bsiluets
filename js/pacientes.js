@@ -3,6 +3,10 @@
 //  Software SIE © 2025
 // ─────────────────────────────────────────
 
+// Adeudo consolidado (créditos + paquetes) de la paciente cargada en la
+// ficha — se llena en verPaciente() y lo consume generarNotaAdeudo().
+let adeudoActual = null;
+
 // ── LISTAR TODOS ──
 async function cargarPacientes(busqueda = '') {
   const tabla = document.getElementById('tabla-pacientes-body');
@@ -89,6 +93,81 @@ async function verPaciente(id) {
     .order('fecha', { ascending: false })
     .limit(10);
 
+  // ── Adeudo total (cobros a crédito + saldo de paquetes) ──
+  // Misma fórmula que usan js/creditos.js y js/paquetes.js — se reutiliza
+  // aquí para consolidar el adeudo del paciente en un solo lugar.
+  const { data: cobrosCredito } = await db
+    .from('pagos')
+    .select('id, total, concepto, fecha')
+    .eq('paciente_id', id)
+    .eq('metodo_pago', 'credito')
+    .eq('liquidado', false)
+    .eq('eliminado', false);
+
+  const { data: abonosCredito } = await db
+    .from('abonos')
+    .select('pago_id, monto')
+    .eq('paciente_id', id)
+    .not('pago_id', 'is', null);
+
+  const abonosPorPago = {};
+  (abonosCredito || []).forEach(a => {
+    if (a.pago_id) abonosPorPago[a.pago_id] = (abonosPorPago[a.pago_id] || 0) + (parseFloat(a.monto) || 0);
+  });
+
+  // Cobros a crédito con saldo > 0 — cada uno es una venta (Tratamiento,
+  // Medicamento, Suplemento o Proteína) que el paciente dejó a deber.
+  const cobrosConSaldo = (cobrosCredito || [])
+    .map(c => ({ ...c, _saldo: Math.max(0, parseFloat(c.total || 0) - (abonosPorPago[c.id] || 0)) }))
+    .filter(c => c._saldo > 0.5);
+
+  // Paquetes activos con saldo > 0 — lo que resta de un plan de sesiones.
+  const paquetesConSaldo = (paquetes || [])
+    .map(pk => ({ ...pk, _saldo: Math.max(0, parseFloat(pk.precio_total || 0) - parseFloat(pk.pagado || 0)) }))
+    .filter(pk => pk._saldo > 0.5);
+
+  const adeudoCreditos = cobrosConSaldo.reduce((s, c) => s + c._saldo, 0);
+  const adeudoPaquetes = paquetesConSaldo.reduce((s, pk) => s + pk._saldo, 0);
+  const adeudoTotal    = adeudoCreditos + adeudoPaquetes;
+
+  document.getElementById('perfil-adeudo-creditos').textContent = adeudoCreditos > 0 ? '$' + adeudoCreditos.toLocaleString() : '—';
+  document.getElementById('perfil-adeudo-paquetes').textContent = adeudoPaquetes > 0 ? '$' + adeudoPaquetes.toLocaleString() : '—';
+  const elAdeudoTotal = document.getElementById('perfil-adeudo-total');
+  elAdeudoTotal.textContent = adeudoTotal > 0 ? '$' + adeudoTotal.toLocaleString() : 'Sin adeudo ✓';
+  elAdeudoTotal.style.color = adeudoTotal > 0 ? '#e74c3c' : '#27AE60';
+
+  // Detalle: de qué ventas viene el adeudo por crédito (concepto + fecha + saldo)
+  const detCreditos = document.getElementById('perfil-adeudo-creditos-detalle');
+  if (detCreditos) {
+    detCreditos.innerHTML = cobrosConSaldo.length > 0
+      ? cobrosConSaldo.map(c => `
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--cream);opacity:.4">
+            <span>${c.concepto || 'Cobro'} — ${formatFecha(c.fecha)}</span><span>$${c._saldo.toLocaleString()}</span>
+          </div>`).join('')
+      : '';
+  }
+
+  // Detalle: de qué paquete/sesiones viene el adeudo por paquetes
+  const detPaquetes = document.getElementById('perfil-adeudo-paquetes-detalle');
+  if (detPaquetes) {
+    detPaquetes.innerHTML = paquetesConSaldo.length > 0
+      ? paquetesConSaldo.map(pk => `
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--cream);opacity:.4">
+            <span>${pk.tratamientos?.nombre || 'Paquete'} — Ses. ${pk.sesion_actual}/${pk.total_sesiones}</span><span>$${pk._saldo.toLocaleString()}</span>
+          </div>`).join('')
+      : '';
+  }
+
+  // Guardar para poder generar la imagen de "Adeudo Total" bajo demanda
+  adeudoActual = {
+    nombre: `${p.nombre} ${p.apellidos}`,
+    cobros: cobrosConSaldo,
+    paquetes: paquetesConSaldo,
+    adeudoCreditos,
+    adeudoPaquetes,
+    adeudoTotal,
+  };
+
   // ── Llenar perfil ──
   const iniciales = `${p.nombre.charAt(0)}${p.apellidos.charAt(0)}`;
   document.getElementById('perfil-avatar').textContent     = iniciales;
@@ -158,6 +237,52 @@ async function verPaciente(id) {
   // Scroll al perfil
   document.querySelector('.patient-profile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   showToast(`✓ Perfil de ${p.nombre} cargado`);
+}
+
+// ── GENERAR IMAGEN "ADEUDO TOTAL" (para enviar a la paciente) ──
+// Reutiliza el mismo modal/estilo de la Nota de Venta y el mismo
+// descargarNotaJPG() de app.js — solo cambia el contenido y el título.
+function generarNotaAdeudo() {
+  if (!adeudoActual) { showToast('⚠ Primero selecciona una paciente'); return; }
+
+  const { nombre, cobros, paquetes, adeudoCreditos, adeudoPaquetes, adeudoTotal } = adeudoActual;
+
+  if (adeudoTotal <= 0) { showToast('✓ Esta paciente no tiene adeudo pendiente'); return; }
+
+  const fecha = fechaHoyISO();
+  const folio = 'AD-' + fecha.replace(/-/g, '') + '-' + Math.floor(Math.random() * 900 + 100);
+
+  const filasCreditos = cobros.length > 0
+    ? cobros.map(c => `<div class="nota-row" style="font-size:12px"><span>${c.concepto || 'Cobro'} — ${formatFecha(c.fecha)}</span><span>$${c._saldo.toLocaleString()}</span></div>`).join('')
+    : `<div class="nota-row" style="font-size:12px;opacity:.5"><span>Sin cobros a crédito pendientes</span><span>—</span></div>`;
+
+  const filasPaquetes = paquetes.length > 0
+    ? paquetes.map(pk => `<div class="nota-row" style="font-size:12px"><span>${pk.tratamientos?.nombre || 'Paquete'} — Ses. ${pk.sesion_actual}/${pk.total_sesiones}</span><span>$${pk._saldo.toLocaleString()}</span></div>`).join('')
+    : `<div class="nota-row" style="font-size:12px;opacity:.5"><span>Sin paquetes con saldo</span><span>—</span></div>`;
+
+  document.getElementById('nota-impr-titulo').textContent = 'ADEUDO TOTAL';
+  document.getElementById('nota-imprimible').innerHTML = `
+    <div class="nota-preview">
+      <div class="nota-header">
+        <div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>
+        ${notaContactoHTML()}
+      </div>
+      <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
+      <div class="nota-row"><span>Paciente</span><strong>${nombre}</strong></div>
+      <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999;margin-bottom:4px">Cobros a crédito</div>
+      ${filasCreditos}
+      <div class="nota-row" style="font-size:12px"><span>Subtotal</span><span>$${adeudoCreditos.toLocaleString()}</span></div>
+      <div style="border-top:1px solid rgba(184,147,90,.15);margin:14px 0 0"></div>
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#999;margin:10px 0 4px">Paquetes / Sesiones</div>
+      ${filasPaquetes}
+      <div class="nota-row" style="font-size:12px"><span>Subtotal</span><span>$${adeudoPaquetes.toLocaleString()}</span></div>
+      <div class="nota-row total-row"><span>ADEUDO TOTAL</span><span><strong>$${adeudoTotal.toLocaleString()}</strong></span></div>
+      <div class="nota-saldo-box">Este documento es informativo y resume el adeudo vigente a la fecha indicada.</div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
+    </div>`;
+
+  openModal('nota-impr');
 }
 
 // ── GUARDAR (CREAR / EDITAR) ──
