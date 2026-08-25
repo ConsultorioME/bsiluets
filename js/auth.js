@@ -90,10 +90,8 @@ if (!licenciaOk) {
 function aplicarRol(rol) {
   const permisos = {
     admin: ['dashboard','agenda','pacientes','tratamientos','inventario','pagos','paquetes','creditos','reportes','caja','gastos','bot','config'],
-    // Recepcionista: se restringe Dashboard y Reportes. Se agrega Créditos
-    // porque ahí vive el historial de abonos que puede eliminar (con
-    // autorización de Admin) igual que hace en Pagos.
-    recepcionista:['agenda','pacientes','pagos','paquetes','creditos'],
+    // Recepcionista: ve todo excepto Dashboard, Reportes, Bot/Chat y Configuración.
+    recepcionista:['agenda','pacientes','tratamientos','inventario','pagos','paquetes','creditos','caja','gastos'],
     capturista:   ['dashboard','pagos','paquetes'],
     doctora:      ['agenda']
   };
