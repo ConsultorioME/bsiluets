@@ -196,7 +196,13 @@ function showModule(id,el){
   const titles={dashboard:'Dashboard',agenda:'Agenda',pacientes:'Catálogo de Pacientes',tratamientos:'Tratamientos',inventario:'Suplementos / Inventario',pagos:'Pagos',paquetes:'Paquetes & Visitas',creditos:'Créditos & Adeudos',reportes:'Reportes',bot:'Bot / Chat',config:'Configuración'};
   document.getElementById('module-title').textContent=titles[id]||id;
   if(id==='dashboard')   initDashboard();
-  if(id==='pacientes')   cargarPacientes();
+  if(id==='pacientes') {
+    cargarPacientes();
+    // Si ya había un perfil abierto (p. ej. se salió a registrar un cobro
+    // en otro módulo y se volvió a Pacientes), se recarga en silencio para
+    // que el adeudo/saldo se vea al día sin tener que volver a dar "Ver".
+    if (typeof pacienteActualId !== 'undefined' && pacienteActualId) verPaciente(pacienteActualId, true);
+  }
   if(id==='tratamientos') cargarTratamientos();
   if(id==='inventario')  cargarInventario();
   if(id==='agenda')      initAgenda();
@@ -253,6 +259,25 @@ function scrollTo(sel){document.querySelector(sel)?.scrollIntoView({behavior:'sm
 // demo que existía aquí (openAbonoModal/abonoSaldoActual/guardarAbono, nunca
 // invocado desde la UI real) se eliminó para no duplicar/confundir con
 // calcNuevoSaldo() de creditos.js.
+
+// ─── SINCRONIZAR TOTALES ENTRE MÓDULOS ───
+// Cada módulo recarga sus propios datos al abrirse (showModule), pero un
+// pago/abono/cobro registrado en un módulo (Pagos, Paquetes & Visitas,
+// Créditos) también cambia totales que se muestran en otros módulos que
+// pueden seguir abiertos en pantalla (Dashboard, Caja, Reportes, Créditos,
+// y sobre todo el perfil de una paciente ya abierto en Pacientes). Sin esto
+// esos totales quedaban desactualizados hasta recargar la página. Se llama
+// al final de cada acción que registra/edita/elimina un pago, abono o cobro.
+function sincronizarModulosFinancieros() {
+  if (typeof initDashboard === 'function')  initDashboard();
+  if (typeof initCaja === 'function')       initCaja();
+  if (typeof initReportes === 'function')   initReportes();
+  if (typeof initCreditos === 'function')   initCreditos();
+  if (typeof cargarPacientes === 'function') cargarPacientes();
+  if (typeof pacienteActualId !== 'undefined' && pacienteActualId && typeof verPaciente === 'function') {
+    verPaciente(pacienteActualId, true);
+  }
+}
 
 // ─── SUB-TABS ───
 function showModTab(id, el) {
@@ -463,9 +488,11 @@ async function initDashboard() {
   const totalPaqs    = paqsActivos?.length || 0;
   const porVencer    = (paqsActivos || []).filter(p => p.total_sesiones - p.sesion_actual <= 2).length;
 
-  // Stock bajo
-  const { data: stockBajo } = await db.from('inventario').select('id').eq('activo', true).filter('stock', 'lte', 'stock_minimo');
-  const totalStockBajo = stockBajo?.length || 0;
+  // Stock bajo (comparación stock <= stock_minimo: PostgREST no compara dos
+  // columnas entre sí vía filtros de URL, así que se trae el inventario
+  // activo y se compara en el cliente)
+  const { data: inventarioActivo } = await db.from('inventario').select('stock, stock_minimo').eq('activo', true);
+  const totalStockBajo = (inventarioActivo || []).filter(i => parseFloat(i.stock) <= parseFloat(i.stock_minimo)).length;
 
   // KPIs
   document.getElementById('dash-citas-hoy').textContent    = totalCitas;

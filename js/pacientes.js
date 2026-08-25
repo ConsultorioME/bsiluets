@@ -7,6 +7,12 @@
 // ficha — se llena en verPaciente() y lo consume generarNotaAdeudo().
 let adeudoActual = null;
 
+// Id de la paciente cuyo perfil está abierto — permite refrescarlo en
+// silencio (sincronizarModulosFinancieros en app.js) cuando se registra un
+// pago/abono/cobro en otro módulo, sin que el usuario tenga que volver a
+// dar clic en "Ver".
+let pacienteActualId = null;
+
 // ── LISTAR TODOS ──
 async function cargarPacientes(busqueda = '') {
   const tabla = document.getElementById('tabla-pacientes-body');
@@ -64,7 +70,12 @@ async function cargarPacientes(busqueda = '') {
 }
 
 // ── VER PERFIL COMPLETO ──
-async function verPaciente(id) {
+// silent=true: refresco en segundo plano (no mueve el scroll ni muestra el
+// toast de "Perfil cargado") — se usa al volver al módulo o tras registrar
+// un pago/abono/cobro en otro módulo, para no interrumpir al usuario.
+async function verPaciente(id, silent = false) {
+  pacienteActualId = id;
+
   // Marcar fila activa
   document.querySelectorAll('#tabla-pacientes-body tr').forEach(r => r.style.background = '');
 
@@ -234,9 +245,11 @@ async function verPaciente(id) {
     }
   }
 
-  // Scroll al perfil
-  document.querySelector('.patient-profile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  showToast(`✓ Perfil de ${p.nombre} cargado`);
+  if (!silent) {
+    // Scroll al perfil
+    document.querySelector('.patient-profile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast(`✓ Perfil de ${p.nombre} cargado`);
+  }
 }
 
 // ── GENERAR IMAGEN "ADEUDO TOTAL" (para enviar a la paciente) ──

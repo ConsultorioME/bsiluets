@@ -354,12 +354,6 @@ async function registrarCobro() {
     }
   }
 
-  // Si es crédito, actualizar módulo créditos
-  if (esCredito && typeof initCreditos === 'function') {
-    const modCreditos = document.getElementById('mod-creditos');
-    if (modCreditos?.classList.contains('active')) initCreditos();
-  }
-
   showToast(`✓ Cobro de $${total.toLocaleString()} registrado correctamente`);
 
   // Nota de venta
@@ -402,6 +396,9 @@ async function registrarCobro() {
   openModal('nota-impr');
   limpiarFormPago();
   await cargarUltimosCobros();
+
+  // Actualizar totales en Pacientes, Dashboard, Créditos, Caja y Reportes
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 // ── CARGAR ÚLTIMOS COBROS ──
@@ -745,10 +742,9 @@ async function eliminarCobro(id) {
 
   // Refrescar el propio módulo de Pagos
   await cargarUltimosCobros();
-
-  // Recalcular en todos los módulos que dependen de "pagos" para créditos/caja/dashboard
-  if (typeof cargarCreditos === 'function')  await cargarCreditos();
   if (typeof cargarEliminados === 'function') await cargarEliminados();
-  if (typeof initCaja === 'function')        initCaja();
-  if (typeof initDashboard === 'function')   initDashboard();
+
+  // Recalcular en todos los módulos que dependen de "pagos" (créditos, caja,
+  // reportes, dashboard, perfil de la paciente en Pacientes)
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }

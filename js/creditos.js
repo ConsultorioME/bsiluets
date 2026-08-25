@@ -389,4 +389,5 @@ async function guardarAbonoReal() {
   openModal('nota-impr');
   conceptoAbonoSeleccionado = null;
   await cargarCreditos();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }

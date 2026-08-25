@@ -246,6 +246,7 @@ async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
   showToast('✓ Sesión eliminada — saldo recalculado');
   await verDetallePaq(paqueteId);
   await cargarPaquetes();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 // ── GUARDAR PAQUETE ──
@@ -284,6 +285,7 @@ async function guardarPaquete() {
   closeModal('nuevo-paquete');
   showToast('✓ Paquete registrado correctamente');
   await cargarPaquetes();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 // ── ELIMINAR PAQUETE ──
@@ -293,6 +295,7 @@ async function eliminarPaquete(id) {
   if (error) { showToast('❌ Error: ' + error.message); return; }
   showToast('✓ Paquete eliminado');
   await cargarPaquetes();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 // ── CARGAR SELECTS MODAL ──
@@ -526,7 +529,19 @@ async function generarNotaVis() {
   paqSelData.sesion_actual = nuevaSesion;
   paqSelData.pagado = nuevoPagado;
   await cargarPaquetes();
+
+  // La visita recién creada tiene fecha = `fecha`; si el filtro de "Notas
+  // del día" se había quedado apuntando a otro día/paciente (de una
+  // búsqueda anterior), la nota nueva no aparecería aunque sí se guardó.
+  // Se resetea el filtro a la fecha registrada para que siempre sea visible.
+  const filtroFechaNotas = document.getElementById('filtro-notas-fecha');
+  if (filtroFechaNotas) filtroFechaNotas.value = fecha;
+  const filtroPacNotas = document.getElementById('filtro-notas-paciente');
+  if (filtroPacNotas) filtroPacNotas.value = '';
   await cargarNotasHoy();
+
+  // Actualizar totales en Pacientes, Dashboard, Créditos, Caja y Reportes
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 
@@ -734,8 +749,7 @@ async function eliminarNotaDia(visitaId) {
   await cargarNotasHoy();
   if (typeof cargarPaquetes === 'function')   await cargarPaquetes();
   if (typeof cargarEliminados === 'function') await cargarEliminados();
-  if (typeof initCaja === 'function')         initCaja();
-  if (typeof initReportes === 'function')     initReportes();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
 function limpiarFiltrosNotas() {
