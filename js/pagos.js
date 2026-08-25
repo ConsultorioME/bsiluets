@@ -401,10 +401,29 @@ async function registrarCobro() {
   if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
+// ── BUSCAR IDs DE PACIENTES POR TEXTO (nombre y/o apellidos, sin importar
+//    el orden en que se escriban las palabras) — usado por el buscador de
+//    paciente en Últimos Cobros, para buscar entre TODOS los pacientes y
+//    no solo entre los que ya están cargados en pantalla. ──
+async function buscarIdsPacientesPorTexto(texto) {
+  const tokens = (texto || '').trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  let query = db.from('pacientes').select('id');
+  tokens.forEach(t => {
+    const safe = t.replace(/[%,]/g, '');
+    query = query.or(`nombre.ilike.%${safe}%,apellidos.ilike.%${safe}%`);
+  });
+
+  const { data } = await query;
+  return (data || []).map(p => p.id);
+}
+
 // ── CARGAR ÚLTIMOS COBROS ──
 async function cargarUltimosCobros() {
-  const fecha    = document.getElementById('filtro-cobros-fecha')?.value || '';
-  const concepto = document.getElementById('filtro-cobros-concepto')?.value.trim() || '';
+  const fecha     = document.getElementById('filtro-cobros-fecha')?.value || '';
+  const concepto  = document.getElementById('filtro-cobros-concepto')?.value.trim() || '';
+  const paciente  = document.getElementById('filtro-cobros-paciente')?.value.trim() || '';
 
   let query = db
     .from('pagos')
@@ -415,10 +434,21 @@ async function cargarUltimosCobros() {
   if (fecha)    query = query.eq('fecha', fecha);
   if (concepto) query = query.ilike('concepto', `%${concepto}%`);
 
-  // Sin búsqueda por concepto: solo los últimos 50 (vista rápida por defecto).
-  // Con búsqueda por concepto: sin límite, para no perder registros antiguos
-  // (ej. saldos a favor viejos que ya salieron de los últimos 50).
-  if (!concepto) query = query.limit(50);
+  if (paciente) {
+    const ids = await buscarIdsPacientesPorTexto(paciente);
+    if (!ids || ids.length === 0) {
+      window._cobrosData = [];
+      renderCobros([]);
+      return;
+    }
+    query = query.in('paciente_id', ids);
+  }
+
+  // Sin ninguna búsqueda: solo los últimos 50 (vista rápida por defecto).
+  // Con búsqueda por concepto y/o paciente: sin límite, para no perder
+  // registros antiguos (ej. saldos a favor viejos que ya salieron de los
+  // últimos 50).
+  if (!concepto && !paciente) query = query.limit(50);
 
   const { data, error } = await query;
 
@@ -432,7 +462,7 @@ async function cargarUltimosCobros() {
   const idsCredito = data.filter(p => p.metodo_pago === 'credito' && !p.liquidado).map(p => p.id);
   let abonosPorPago = {};
   if (idsCredito.length > 0) {
-    const { data: abonos } = await db.from('abonos').select('pago_id, monto').in('pago_id', idsCredito);
+    const { data: abonos } = await db.from('abonos').select('pago_id, monto').in('pago_id', idsCredito).eq('eliminado', false);
     (abonos || []).forEach(a => {
       abonosPorPago[a.pago_id] = (abonosPorPago[a.pago_id] || 0) + parseFloat(a.monto || 0);
     });
@@ -451,6 +481,13 @@ let cobrosConceptoTimeout;
 function buscarCobrosPorConcepto() {
   clearTimeout(cobrosConceptoTimeout);
   cobrosConceptoTimeout = setTimeout(() => cargarUltimosCobros(), 400);
+}
+
+// ── FILTRO POR PACIENTE (consulta directo a Supabase, con debounce) ──
+let cobrosPacienteTimeout;
+function buscarCobrosPorPaciente() {
+  clearTimeout(cobrosPacienteTimeout);
+  cobrosPacienteTimeout = setTimeout(() => cargarUltimosCobros(), 400);
 }
 
 function renderCobros(data, abonosPorPago = {}) {
@@ -575,7 +612,7 @@ async function reimprimirCobro(id) {
   // que se ve en la nota original y en Últimos Cobros.
   let filaPagoNota;
   if (p.metodo_pago === 'credito') {
-    const { data: abonos } = await db.from('abonos').select('monto, metodo_pago').eq('pago_id', p.id);
+    const { data: abonos } = await db.from('abonos').select('monto, metodo_pago').eq('pago_id', p.id).eq('eliminado', false);
     const pagado = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
     const saldo  = Math.max(0, parseFloat(p.total || 0) - pagado);
     const pagadoTexto = (abonos && abonos.length > 0)
@@ -720,7 +757,7 @@ async function eliminarCobro(id) {
   // pero ya no se restarían de ningún saldo (el dinero recibido desaparecería
   // de la contabilidad del adeudo). Se bloquea hasta reasignar/eliminar esos
   // abonos primero.
-  const { data: abonosLigados } = await db.from('abonos').select('id, monto').eq('pago_id', id);
+  const { data: abonosLigados } = await db.from('abonos').select('id, monto').eq('pago_id', id).eq('eliminado', false);
   if (abonosLigados && abonosLigados.length > 0) {
     const total = abonosLigados.reduce((s, a) => s + parseFloat(a.monto || 0), 0);
     showToast(`⚠ Este cobro tiene ${abonosLigados.length} abono(s) por $${total.toLocaleString()} ligado(s). Reasígnalos o elimínalos antes de borrar el cobro.`);
@@ -728,6 +765,11 @@ async function eliminarCobro(id) {
   }
 
   if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación y se recalculará el saldo del paciente si era un cobro en crédito.')) return;
+
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar un cobro requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
 
   const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
   const { error } = await db.from('pagos').update({

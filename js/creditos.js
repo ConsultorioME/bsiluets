@@ -37,7 +37,8 @@ async function cargarCreditos() {
   const { data: abonosRaw } = await db
     .from('abonos')
     .select('pago_id, monto, paciente_id')
-    .not('pago_id', 'is', null);
+    .not('pago_id', 'is', null)
+    .eq('eliminado', false);
 
   const abonosPorPago = {};
   (abonosRaw || []).forEach(a => {
@@ -74,7 +75,8 @@ async function cargarCreditos() {
   const { data: abonosTodos } = await db
     .from('abonos')
     .select('paciente_id, monto, pago_id, pacientes(id, nombre, apellidos)')
-    .not('pago_id', 'is', null);
+    .not('pago_id', 'is', null)
+    .eq('eliminado', false);
 
   (abonosTodos || []).forEach(a => {
     const id     = a.paciente_id;
@@ -198,6 +200,7 @@ async function abrirDetalleCredito(pacienteId, nombre) {
     .from('abonos')
     .select('*')
     .eq('paciente_id', pacienteId)
+    .eq('eliminado', false)
     .order('fecha', { ascending: false });
 
   const abonosPorPago = {};
@@ -234,6 +237,7 @@ async function abrirDetalleCredito(pacienteId, nombre) {
         <span class="abono-desc">${a.referencia || 'Abono'}</span>
         <span style="color:#27AE60;font-weight:500">-$${parseFloat(a.monto).toLocaleString()}</span>
         <span class="badge badge-green" style="font-size:10px">${a.metodo_pago || '—'}</span>
+        <button class="tb-btn danger" style="padding:2px 7px;font-size:10px;background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c" onclick="eliminarAbono('${a.id}',${a.pago_id ? `'${a.pago_id}'` : 'null'})">✕</button>
       </div>`).join('');
   } else {
     cont.innerHTML = '<div style="font-size:12px;color:var(--cream);opacity:.3">Sin abonos registrados</div>';
@@ -389,5 +393,48 @@ async function guardarAbonoReal() {
   openModal('nota-impr');
   conceptoAbonoSeleccionado = null;
   await cargarCreditos();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
+}
+
+// ── ELIMINAR ABONO (soft-delete: deja de contar en la contabilidad y el
+//    saldo del cobro/paciente se recalcula solo, ya que el saldo siempre se
+//    calcula dinámicamente a partir de `abonos`. Queda registrado en el
+//    Historial de Eliminaciones de Configuración, igual que Cobros y Notas
+//    de visita). ──
+async function eliminarAbono(id, pagoId) {
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar un abono requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
+  if (!confirm('¿Eliminar este abono? Ya no contará en la contabilidad y el saldo pendiente del paciente aumentará de nuevo. Quedará un registro en el Historial de Eliminaciones.')) return;
+
+  const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+  const { error } = await db.from('abonos').update({
+    eliminado:     true,
+    eliminado_por: usuario.usuario || 'admin',
+    eliminado_at:  new Date().toISOString(),
+  }).eq('id', id);
+
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  // Si el abono eliminado era el que liquidaba un cobro a crédito, hay que
+  // reabrirlo (ya no está totalmente cubierto).
+  if (pagoId) {
+    const { data: pago } = await db.from('pagos').select('total, liquidado').eq('id', pagoId).single();
+    if (pago && pago.liquidado) {
+      const { data: restantes } = await db.from('abonos').select('monto').eq('pago_id', pagoId).eq('eliminado', false);
+      const sumaRestante = (restantes || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+      if (sumaRestante < parseFloat(pago.total || 0) - 0.5) {
+        await db.from('pagos').update({ liquidado: false }).eq('id', pagoId);
+      }
+    }
+  }
+
+  showToast('✓ Abono eliminado — saldo recalculado');
+
+  if (creditoActual.pacienteId) await abrirDetalleCredito(creditoActual.pacienteId, creditoActual.nombre);
+  await cargarCreditos();
+  if (typeof cargarEliminados === 'function') await cargarEliminados();
   if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }

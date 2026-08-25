@@ -291,6 +291,12 @@ async function guardarPaquete() {
 // ── ELIMINAR PAQUETE ──
 async function eliminarPaquete(id) {
   if (!confirm('¿Eliminar este paquete?')) return;
+
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar un paquete requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
   const { error } = await db.from('paquetes').update({ activo: false }).eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
   showToast('✓ Paquete eliminado');

@@ -119,7 +119,8 @@ async function verPaciente(id, silent = false) {
     .from('abonos')
     .select('pago_id, monto')
     .eq('paciente_id', id)
-    .not('pago_id', 'is', null);
+    .not('pago_id', 'is', null)
+    .eq('eliminado', false);
 
   const abonosPorPago = {};
   (abonosCredito || []).forEach(a => {

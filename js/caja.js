@@ -59,6 +59,7 @@ async function cargarCaja(fecha) {
     .from('abonos')
     .select('*, pacientes(nombre, apellidos)')
     .eq('fecha', fecha)
+    .eq('eliminado', false)
     .order('created_at', { ascending: true });
 
   // 4. Gastos del día

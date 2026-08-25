@@ -479,6 +479,7 @@
               <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
                 <span>Últimos Cobros</span>
                 <div style="display:flex;gap:8px">
+                  <input type="text" id="filtro-cobros-paciente" placeholder="Buscar por paciente..." style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" oninput="buscarCobrosPorPaciente()">
                   <input type="text" id="filtro-cobros-concepto" placeholder="Buscar por concepto..." style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" oninput="buscarCobrosPorConcepto()">
                   <input type="date" id="filtro-cobros-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:6px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none" onchange="filtrarUltimosCobros()">
                 </div>
@@ -1246,6 +1247,28 @@
     <div class="modal-actions" id="abono-actions-form" style="display:none">
       <button class="btn-outline" onclick="volverListaConceptos()">Cancelar</button>
       <button class="btn-primary" onclick="guardarAbonoReal()">Registrar Abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONFIRMAR ADMIN (autorización para acciones sensibles de Recepcionista) -->
+<div class="modal-overlay" id="modal-confirmar-admin">
+  <div class="modal" style="max-width:380px">
+    <button class="modal-close" onclick="cancelarConfirmacionAdmin()">×</button>
+    <div class="modal-title">Autorización requerida</div>
+    <div style="font-size:12px;color:var(--cream);opacity:.6;margin-bottom:16px" id="confirmar-admin-motivo">Esta acción requiere autorización de un Administrador.</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Usuario Admin</label>
+      <input type="text" id="confirmar-admin-usuario" autocomplete="off" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Contraseña</label>
+      <input type="password" id="confirmar-admin-password" autocomplete="off" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none" onkeydown="if(event.key==='Enter')validarConfirmacionAdmin()">
+    </div>
+    <div id="confirmar-admin-err" style="display:none;color:#e74c3c;font-size:12px;margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="cancelarConfirmacionAdmin()">Cancelar</button>
+      <button class="btn-primary" onclick="validarConfirmacionAdmin()">Autorizar</button>
     </div>
   </div>
 </div>

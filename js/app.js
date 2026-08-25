@@ -19,7 +19,8 @@ function initAdmin() {
   let rol = 'recepcionista';
   try { rol = (JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}').rol) || rol; } catch (e) {}
 
-  const landing = rol === 'doctora' ? 'agenda' : 'dashboard';
+  // Recepcionista ya no tiene acceso a Dashboard, así que aterriza en Agenda.
+  const landing = (rol === 'doctora' || rol === 'recepcionista') ? 'agenda' : 'dashboard';
   if (landing === 'dashboard') initDashboard();
   const navEl = document.querySelector(`.nav-item[onclick*="showModule('${landing}'"]`) || document.querySelector('.nav-item');
   showModule(landing, navEl);
@@ -409,12 +410,16 @@ async function cargarEliminados() {
   const tbody = document.getElementById('tabla-eliminados');
   if (!tbody) return;
 
-  const [{ data: cobros }, { data: notas }] = await Promise.all([
+  const [{ data: cobros }, { data: notas }, { data: abonos }] = await Promise.all([
     db.from('pagos')
       .select('*, pacientes(nombre, apellidos)')
       .eq('eliminado', true)
       .order('eliminado_at', { ascending: false }),
     db.from('visitas')
+      .select('*, pacientes(nombre, apellidos)')
+      .eq('eliminado', true)
+      .order('eliminado_at', { ascending: false }),
+    db.from('abonos')
       .select('*, pacientes(nombre, apellidos)')
       .eq('eliminado', true)
       .order('eliminado_at', { ascending: false }),
@@ -440,6 +445,16 @@ async function cargarEliminados() {
       monto:     parseFloat(v.monto_cobrado) || 0,
       por:       v.eliminado_por,
       at:        v.eliminado_at,
+    })),
+    ...(abonos || []).map(a => ({
+      tipo:      'Abono',
+      badge:     'badge-gold',
+      fecha:     a.fecha || '—',
+      nombre:    a.pacientes ? `${a.pacientes.nombre} ${a.pacientes.apellidos}` : '—',
+      concepto:  a.referencia || 'Abono',
+      monto:     parseFloat(a.monto) || 0,
+      por:       a.eliminado_por,
+      at:        a.eliminado_at,
     })),
   ].sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
 

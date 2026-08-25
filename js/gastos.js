@@ -47,13 +47,13 @@ async function cargarGastos() {
 
   if (error) { showToast('❌ Error al cargar gastos'); return; }
 
-  // Cargar ingresos del mes (pagos)
+  // Cargar ingresos del mes (pagos) — excluye eliminados
   const { data: pagos } = await db.from('pagos')
-    .select('total').gte('fecha', desde).lte('fecha', hasta);
+    .select('total').gte('fecha', desde).lte('fecha', hasta).eq('eliminado', false);
 
-  // Cargar abonos del mes
+  // Cargar abonos del mes — excluye eliminados
   const { data: abonos } = await db.from('abonos')
-    .select('monto, metodo_pago').gte('fecha', desde).lte('fecha', hasta);
+    .select('monto, metodo_pago').gte('fecha', desde).lte('fecha', hasta).eq('eliminado', false);
 
   const totalGastos  = (gastos || []).reduce((s, g) => s + parseFloat(g.monto || 0), 0);
   const totalPagos   = (pagos || []).reduce((s, p) => s + parseFloat(p.total || 0), 0);
