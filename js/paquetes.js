@@ -221,6 +221,11 @@ async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
   );
   if (!ok) return;
 
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar una sesión requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
   const { error: errDel } = await db.from('visitas').delete().eq('id', visitaId);
   if (errDel) { showToast('❌ Error al eliminar la sesión: ' + errDel.message); return; }
 
@@ -721,6 +726,11 @@ async function eliminarNotaDia(visitaId) {
     `\n\nQuedará un registro en el Historial de Eliminaciones (Configuración). Esta acción no se puede deshacer.`
   );
   if (!ok) return;
+
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar una nota del día requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
 
   const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
   const { error } = await db.from('visitas').update({
