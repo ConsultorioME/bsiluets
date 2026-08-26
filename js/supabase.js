@@ -9,6 +9,95 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ─────────────────────────────────────────
+//  SINCRONIZACIÓN EN TIEMPO REAL ENTRE EQUIPOS
+//  Cada módulo carga sus datos al abrirse (showModule) o tras una acción
+//  propia (sincronizarModulosFinancieros), pero eso NO cubre un cambio
+//  hecho en OTRA computadora mientras esta pantalla sigue abierta: hasta
+//  ahora, si el equipo A tenía Créditos abierto y el equipo B registraba
+//  un pago, A no lo veía hasta salir y volver a entrar al módulo (o F5).
+//  Esto escucha los cambios de Supabase (INSERT/UPDATE/DELETE) en las
+//  tablas clave y refresca solo el módulo visible en pantalla, sin
+//  reiniciar formularios que la usuaria pueda tener a medio llenar.
+//  Requiere que "Realtime" esté activado para estas tablas en el panel
+//  de Supabase (Database → Replication).
+// ─────────────────────────────────────────
+const TABLAS_REALTIME = [
+  'pacientes', 'pagos', 'abonos', 'paquetes', 'visitas',
+  'tratamientos', 'inventario', 'gastos', 'agenda', 'fechas_bloqueadas'
+];
+
+let _realtimeIniciado = false;
+let _refrescoRealtimeTimeout = null;
+
+function iniciarRealtime() {
+  if (_realtimeIniciado) return;
+  _realtimeIniciado = true;
+
+  const canal = db.channel('bsiluets-cambios');
+  TABLAS_REALTIME.forEach(tabla => {
+    canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => {
+      // Varios cambios pueden llegar casi juntos (p. ej. un pago + su
+      // abono): se agrupan para refrescar una sola vez, no una por evento.
+      clearTimeout(_refrescoRealtimeTimeout);
+      _refrescoRealtimeTimeout = setTimeout(refrescarModuloActivo, 400);
+    });
+  });
+  canal.subscribe();
+}
+
+// Refresca SOLO los datos del módulo visible en pantalla en ese momento.
+function refrescarModuloActivo() {
+  const activo = document.querySelector('.module.active');
+  if (!activo || !activo.id) return;
+  const id = activo.id.replace('mod-', '');
+
+  switch (id) {
+    case 'dashboard':
+      if (typeof initDashboard === 'function') initDashboard();
+      break;
+    case 'pacientes':
+      if (typeof cargarPacientes === 'function') cargarPacientes();
+      if (typeof pacienteActualId !== 'undefined' && pacienteActualId && typeof verPaciente === 'function') {
+        verPaciente(pacienteActualId, true);
+      }
+      break;
+    case 'tratamientos':
+      if (typeof cargarTratamientos === 'function') cargarTratamientos();
+      break;
+    case 'inventario':
+      if (typeof cargarInventario === 'function') cargarInventario();
+      break;
+    case 'agenda':
+      if (typeof cargarCitasSemana === 'function') cargarCitasSemana();
+      break;
+    case 'pagos':
+      // No se usa initPagos(): reiniciaría la fecha y los selects del
+      // formulario de cobro que la usuaria pueda tener a medio llenar.
+      if (typeof cargarUltimosCobros === 'function') cargarUltimosCobros();
+      break;
+    case 'paquetes':
+      if (typeof cargarPaquetes === 'function') cargarPaquetes();
+      if (typeof cargarNotasHoy === 'function') cargarNotasHoy();
+      break;
+    case 'creditos':
+      if (typeof initCreditos === 'function') initCreditos();
+      break;
+    case 'caja':
+      if (typeof initCaja === 'function') initCaja();
+      break;
+    case 'gastos':
+      if (typeof cargarGastos === 'function') cargarGastos();
+      break;
+    case 'reportes':
+      if (typeof initReportes === 'function') initReportes();
+      break;
+    case 'config':
+      if (typeof cargarEliminados === 'function') cargarEliminados();
+      break;
+  }
+}
+
 // Fecha de HOY en zona horaria LOCAL, formato YYYY-MM-DD. No usar
 // `new Date().toISOString()` para esto: convierte a UTC, y en México
 // (UTC-6/-7) eso adelanta la fecha un día durante la tarde/noche.
