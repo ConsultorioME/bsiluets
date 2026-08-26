@@ -159,6 +159,7 @@ async function guardarGasto() {
   if (!fecha)       { showToast('⚠ La fecha es obligatoria'); return; }
   if (!descripcion) { showToast('⚠ La descripción es obligatoria'); return; }
   if (monto <= 0)   { showToast('⚠ El monto debe ser mayor a 0'); return; }
+  if (!metodo_pago) { showToast('⚠ Selecciona el método de pago'); return; }
 
   const datos = { fecha, categoria, descripcion, monto, metodo_pago, referencia: referencia || null };
 
@@ -208,6 +209,6 @@ function limpiarFormGasto() {
   const hoy = fechaHoyISO();
   document.getElementById('gasto-fecha').value     = hoy;
   document.getElementById('gasto-categoria').value = 'Insumos y productos';
-  document.getElementById('gasto-metodo').value    = 'efectivo';
+  document.getElementById('gasto-metodo').value    = '';
   document.getElementById('gasto-modal-title').textContent = 'Nuevo Gasto';
 }

@@ -285,6 +285,7 @@ function seleccionarConceptoAbono(tipo, id) {
   document.getElementById('abono-saldo-nuevo').textContent     = '$' + saldo.toLocaleString();
   document.getElementById('abono-saldo-nuevo').style.color     = 'var(--gold)';
   document.getElementById('abono-monto').value      = '';
+  document.getElementById('abono-metodo').value     = '';
   document.getElementById('abono-referencia').value = '';
 
   const hoy = fechaHoyISO();
@@ -325,6 +326,7 @@ async function guardarAbonoReal() {
   const ref    = document.getElementById('abono-referencia').value.trim();
 
   if (monto <= 0) { showToast('⚠ Ingresa un monto válido'); return; }
+  if (!metodo)    { showToast('⚠ Selecciona el método de pago'); return; }
   if (monto > conceptoAbonoSeleccionado.saldo + 0.5) { showToast('⚠ El abono supera el saldo de este concepto'); return; }
 
   const { item, nombre, saldo } = conceptoAbonoSeleccionado;

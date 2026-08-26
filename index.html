@@ -437,6 +437,7 @@
               <div style="display:flex;flex-direction:column;gap:8px" id="metodos-pago-container">
                 <div style="display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center">
                   <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                    <option value="" selected disabled>Selecciona método...</option>
                     <option value="efectivo">💵 Efectivo</option>
                     <option value="tarjeta">💳 Tarjeta</option>
                     <option value="transferencia">🏦 Transferencia</option>
@@ -564,6 +565,7 @@
                       <div style="display:flex;flex-direction:column;gap:6px" id="vis-metodos-container">
                         <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
                           <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                            <option value="" selected disabled>Selecciona método...</option>
                             <option value="efectivo">💵 Efectivo</option>
                             <option value="tarjeta">💳 Tarjeta</option>
                             <option value="transferencia">🏦 Transferencia</option>
@@ -765,6 +767,7 @@
       </div>
       <div class="fg"><label>Método de pago</label>
         <select id="gasto-metodo" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
+          <option value="" selected disabled>Selecciona método...</option>
           <option value="efectivo">Efectivo</option>
           <option value="tarjeta">Tarjeta</option>
           <option value="transferencia">Transferencia</option>
@@ -1230,7 +1233,7 @@
       </div>
       <div class="form-row">
         <div class="fg"><label>Monto del abono</label><input type="number" id="abono-monto" placeholder="0.00" oninput="calcNuevoSaldo()"></div>
-        <div class="fg"><label>Método</label><select id="abono-metodo"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>
+        <div class="fg"><label>Método</label><select id="abono-metodo"><option value="" selected disabled>Selecciona método...</option><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>
       </div>
       <div class="fg"><label>Fecha</label><input type="date" id="abono-fecha"></div>
       <div class="fg"><label>Referencia (opcional)</label><input type="text" id="abono-referencia" placeholder="Nota o referencia..."></div>

@@ -37,6 +37,7 @@ function limpiarFormVisita() {
     metodosCont.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
         <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+          <option value="" selected disabled>Selecciona método...</option>
           <option value="efectivo">💵 Efectivo</option>
           <option value="tarjeta">💳 Tarjeta</option>
           <option value="transferencia">🏦 Transferencia</option>
@@ -507,6 +508,22 @@ async function generarNotaVis() {
   const fecha    = document.getElementById('vis-fecha').value;
   const tipoPago = document.getElementById('vis-pago-tipo').value;
   const monto    = tipoPago === 'no' ? 0 : obtenerMontoTotalVis();
+
+  // Cada renglón con monto capturado necesita método elegido explícitamente
+  // (ya no hay "Efectivo" por default), para no confundir tarjeta/transferencia
+  // con efectivo por descuido.
+  if (tipoPago !== 'no') {
+    const filasMetodoSel = document.querySelectorAll('#vis-metodos-container .vis-metodo-sel');
+    const filasMetodoMonto = document.querySelectorAll('#vis-metodos-container .vis-metodo-monto');
+    for (let i = 0; i < filasMetodoSel.length; i++) {
+      const montoFila = parseFloat(filasMetodoMonto[i]?.value || 0);
+      if (montoFila > 0 && !filasMetodoSel[i].value) {
+        showToast('⚠ Selecciona el método de pago');
+        return;
+      }
+    }
+  }
+
   const metodo = obtenerMetodosVis();
   const nuevaSesion = paqSelData.sesion_actual + 1;
 
@@ -785,6 +802,7 @@ function agregarMetodoVis() {
   div.style.cssText = 'display:grid;grid-template-columns:1fr 110px 32px;gap:6px;align-items:center';
   div.innerHTML = `
     <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <option value="" selected disabled>Selecciona método...</option>
       <option value="efectivo">💵 Efectivo</option>
       <option value="tarjeta">💳 Tarjeta</option>
       <option value="transferencia">🏦 Transferencia</option>

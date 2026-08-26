@@ -278,6 +278,19 @@ async function registrarCobro() {
   const totalSupls  = suplItems.reduce((s, s2) => s + s2.monto, 0);
   const total      = totalTrats + totalMedics + totalSupls;
   const concepto   = [...tratItems.map(t => t.nombre), ...medicItems.map(m => m.nombre), ...suplItems.map(s => s.nombre)].join(' + ');
+  // Cada renglón con un monto capturado debe tener también un método de pago
+  // elegido explícitamente (ya no hay "Efectivo" por default): evita que un
+  // pago con tarjeta/transferencia se guarde como Efectivo por descuido.
+  const filasMetodoSel = document.querySelectorAll('#metodos-pago-container .metodo-sel');
+  const filasMetodoMonto = document.querySelectorAll('#metodos-pago-container .metodo-monto');
+  for (let i = 0; i < filasMetodoSel.length; i++) {
+    const montoFila = parseFloat(filasMetodoMonto[i]?.value || 0);
+    if (montoFila > 0 && !filasMetodoSel[i].value) {
+      showToast('⚠ Selecciona el método de pago de cada renglón capturado');
+      return;
+    }
+  }
+
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
   const metodoPago     = obtenerMetodosPago();
   const metodoDetalle  = obtenerMetodosPagoDetalle();
@@ -560,6 +573,7 @@ function limpiarFormPago() {
     div.style.cssText = 'display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center';
     div.innerHTML = `
       <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
+        <option value="" selected disabled>Selecciona método...</option>
         <option value="efectivo">💵 Efectivo</option>
         <option value="tarjeta">💳 Tarjeta</option>
         <option value="transferencia">🏦 Transferencia</option>
@@ -657,6 +671,7 @@ function agregarMetodoPago() {
   div.style.cssText = 'display:grid;grid-template-columns:1fr 140px 32px;gap:8px;align-items:center';
   div.innerHTML = `
     <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      <option value="" selected disabled>Selecciona método...</option>
       <option value="efectivo">💵 Efectivo</option>
       <option value="tarjeta">💳 Tarjeta</option>
       <option value="transferencia">🏦 Transferencia</option>
