@@ -513,7 +513,7 @@
             </div>
             <div style="display:flex;gap:12px;margin-bottom:18px">
               <input type="text" class="search-box" placeholder="🔍  Buscar paciente o paquete..." oninput="buscarPaquete(this.value)">
-              <button class="tb-btn" onclick="openModal('nuevo-paquete')">+ Nuevo Paquete</button>
+              <button class="tb-btn" onclick="abrirModalPaquete()">+ Nuevo Paquete</button>
             </div>
             <div class="card">
               <div class="card-title">Paquetes</div>
@@ -1183,6 +1183,7 @@
         <option value="total">Pago total al inicio</option>
         <option value="sesion">Pago por sesión</option>
         <option value="enganche">Enganche + saldo en abonos</option>
+        <option value="cortesia">🎁 Cortesía / Sin costo</option>
       </select>
     </div>
     <div id="bloque-enganche" style="display:none">
@@ -1194,6 +1195,17 @@
           <input type="number" id="npaq-saldo" readonly style="color:var(--gold);background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;outline:none;width:100%">
         </div>
       </div>
+    </div>
+    <div class="fg" id="bloque-metodo-inicial" style="display:none"><label id="npaq-metodo-label">Método de pago</label>
+      <select id="npaq-metodo" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+        <option value="" selected disabled>Selecciona método...</option>
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+    </div>
+    <div id="bloque-cortesia-aviso" style="display:none;background:rgba(155,89,182,.08);border:1px solid rgba(155,89,182,.25);padding:10px 13px;font-size:12px;color:#9b59b6;margin-bottom:14px">
+      🎁 Este paquete se registrará como <strong>cortesía</strong>: no se cobra, no pide método de pago y no se refleja como ingreso en Caja.
     </div>
     <div class="fg"><label>Fecha de inicio</label>
       <input type="date" id="npaq-fecha" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">

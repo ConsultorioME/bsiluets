@@ -6,6 +6,26 @@
 let pacSelIdx = -1;
 let paqSelData = null;
 
+// ── ABRIR MODAL "NUEVO PAQUETE" (oculta "Cortesía" a quien no sea Admin) ──
+// Solo el rol "admin" (incluye la cuenta sie.admin, que también tiene
+// rol 'admin') puede regalar paquetes de cortesía.
+function abrirModalPaquete() {
+  const u = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+  const esAdmin = u.rol === 'admin';
+  const optCortesia = document.querySelector('#npaq-esquema option[value="cortesia"]');
+  if (optCortesia) {
+    optCortesia.hidden = !esAdmin;
+    optCortesia.disabled = !esAdmin;
+    // Si el esquema quedó en "cortesia" de una sesión anterior con otro
+    // rol, se regresa a "total" para no dejar una opción oculta elegida.
+    if (!esAdmin && document.getElementById('npaq-esquema').value === 'cortesia') {
+      document.getElementById('npaq-esquema').value = 'total';
+      toggleEsquema();
+    }
+  }
+  openModal('nuevo-paquete');
+}
+
 // ── LIMPIAR FORM DE VISITA (tras cerrar la Nota de Venta) ──
 // Evita que queden datos de la visita anterior (paciente, monto, método,
 // paquete seleccionado) que puedan causar conflictos al registrar la
@@ -113,15 +133,24 @@ async function cargarPaquetes(busqueda = '') {
     const pct    = Math.round((p.sesion_actual / p.total_sesiones) * 100);
     const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos}` : '—';
     const trat   = p.tratamientos?.nombre || '—';
-    const est    = saldo === 0
-      ? '<span class="badge badge-green">Liquidado</span>'
-      : p.sesion_actual >= p.total_sesiones
-        ? '<span class="badge badge-warn">Última ses.</span>'
-        : '<span class="badge badge-gold">En curso</span>';
+    // Una cortesía siempre queda con saldo $0 (se marca pagada por
+    // completo aunque no se haya cobrado nada), así que sin esta excepción
+    // se mostraría "Liquidado" igual que un paquete realmente pagado —
+    // ocultando que en realidad fue regalado.
+    const est    = p.esquema_pago === 'cortesia'
+      ? '<span class="badge" style="background:rgba(155,89,182,.15);color:#9b59b6;border:1px solid rgba(155,89,182,.35)">🎁 Cortesía</span>'
+      : saldo === 0
+        ? '<span class="badge badge-green">Liquidado</span>'
+        : p.sesion_actual >= p.total_sesiones
+          ? '<span class="badge badge-warn">Última ses.</span>'
+          : '<span class="badge badge-gold">En curso</span>';
+    const nombreTrat = p.esquema_pago === 'cortesia'
+      ? `${trat} <span style="font-size:9px;letter-spacing:.06em;color:#9b59b6;opacity:.85">· PAQUETE DE CORTESÍA</span>`
+      : trat;
 
     return `<tr>
       <td>${nombre}</td>
-      <td>${trat}</td>
+      <td>${nombreTrat}</td>
       <td style="text-align:center">${p.sesion_actual}/${p.total_sesiones}</td>
       <td style="min-width:110px">
         <div style="font-size:11px;color:var(--cream);opacity:.4;margin-bottom:3px">${pct}%</div>
@@ -156,8 +185,11 @@ async function verDetallePaq(id) {
     .order('numero_sesion', { ascending: true });
 
   const saldo = p.precio_total - p.pagado;
-  document.getElementById('det-titulo').textContent =
-    `${p.pacientes?.nombre} ${p.pacientes?.apellidos} — ${p.tratamientos?.nombre} (${p.total_sesiones} ses.)`;
+  const badgeCortesia = p.esquema_pago === 'cortesia'
+    ? ' <span class="badge" style="background:rgba(155,89,182,.15);color:#9b59b6;border:1px solid rgba(155,89,182,.35);font-size:10px;vertical-align:middle">🎁 PAQUETE DE CORTESÍA</span>'
+    : '';
+  document.getElementById('det-titulo').innerHTML =
+    `${p.pacientes?.nombre} ${p.pacientes?.apellidos} — ${p.tratamientos?.nombre} (${p.total_sesiones} ses.)${badgeCortesia}`;
 
   let dots = '';
   const visitasMap = {};
@@ -269,9 +301,32 @@ async function guardarPaquete() {
   if (!tratId)  { showToast('⚠ Selecciona un tratamiento'); return; }
   if (!total)   { showToast('⚠ El total no puede ser $0'); return; }
 
+  // Solo Admin (incluye sie.admin) puede registrar paquetes de cortesía.
+  if (esquema === 'cortesia') {
+    const u = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+    if (u.rol !== 'admin') {
+      showToast('⚠ Solo un Administrador puede registrar paquetes de cortesía');
+      return;
+    }
+  }
+
+  // La cortesía se marca automáticamente como pagada en su totalidad (no
+  // es dinero real: es el valor del tratamiento que se está regalando),
+  // por eso no entra en el mismo flujo de cobro que "total"/"enganche".
   let pagadoInicial = 0;
-  if (esquema === 'total') pagadoInicial = total;
+  if (esquema === 'total' || esquema === 'cortesia') pagadoInicial = total;
   else if (esquema === 'enganche') pagadoInicial = parseFloat(document.getElementById('npaq-enganche').value) || 0;
+
+  // Si se cobra algo al registrar el paquete (pago total o enganche), se
+  // necesita el método de pago explícito — nunca por default "Efectivo" —
+  // para poder reflejar ese ingreso en Caja igual que un cobro normal.
+  // La cortesía nunca pide método: no hay dinero real de por medio.
+  const metodo = document.getElementById('npaq-metodo').value;
+  const esCortesia = esquema === 'cortesia';
+  if (pagadoInicial > 0 && !esCortesia && !metodo) {
+    showToast('⚠ Selecciona el método de pago');
+    return;
+  }
 
   const datos = {
     paciente_id:    pacId,
@@ -285,8 +340,24 @@ async function guardarPaquete() {
     activo:         true,
   };
 
-  const { error } = await db.from('paquetes').insert([datos]);
+  const { data: paqueteInsertado, error } = await db.from('paquetes').insert([datos]).select('id').single();
   if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  // Registrar el pago inicial (total o enganche) como abono ligado al
+  // paquete, para que Caja lo cuente ese mismo día por su método real
+  // (mismo patrón que el pago inicial de un cobro a crédito en Pagos).
+  // Una cortesía NUNCA genera este registro: no debe sumar a Caja.
+  if (pagadoInicial > 0 && !esCortesia && paqueteInsertado?.id) {
+    const { error: errAbono } = await db.from('abonos').insert([{
+      paciente_id: pacId,
+      paquete_id:  paqueteInsertado.id,
+      monto:       pagadoInicial,
+      metodo_pago: metodo,
+      fecha:       fecha,
+      referencia:  esquema === 'enganche' ? 'Enganche inicial del paquete' : 'Pago total del paquete',
+    }]);
+    if (errAbono) showToast('⚠ Paquete guardado, pero no se pudo registrar el pago inicial en Caja: ' + errAbono.message);
+  }
 
   closeModal('nuevo-paquete');
   showToast('✓ Paquete registrado correctamente');
@@ -358,6 +429,19 @@ function calcSaldoPaq() {
 function toggleEsquema() {
   const v = document.getElementById('npaq-esquema').value;
   document.getElementById('bloque-enganche').style.display = v === 'enganche' ? 'block' : 'none';
+
+  // El pago de contado ("total") y el enganche son dinero que entra al
+  // momento de registrar el paquete, así que ambos necesitan método de
+  // pago. "Pago por sesión" y "Cortesía" no cobran nada al capturarse.
+  const bloqueMetodo = document.getElementById('bloque-metodo-inicial');
+  const labelMetodo   = document.getElementById('npaq-metodo-label');
+  const necesitaMetodo = v === 'total' || v === 'enganche';
+  bloqueMetodo.style.display = necesitaMetodo ? 'block' : 'none';
+  if (labelMetodo) labelMetodo.textContent = v === 'enganche' ? 'Método de pago (del enganche)' : 'Método de pago (del pago total)';
+  if (!necesitaMetodo) document.getElementById('npaq-metodo').value = '';
+
+  const avisoCortesia = document.getElementById('bloque-cortesia-aviso');
+  if (avisoCortesia) avisoCortesia.style.display = v === 'cortesia' ? 'block' : 'none';
 }
 
 // ── BÚSQUEDA ──

@@ -70,6 +70,17 @@ async function cargarCaja(fecha) {
     .eq('activo', true)
     .order('created_at', { ascending: true });
 
+  // 5. Paquetes de cortesía registrados este día — informativo únicamente.
+  //    NO se suma a ningún total de ingresos/caja: es tratamiento regalado,
+  //    no dinero recibido. Se muestra aparte para que el dueño sepa cuánto
+  //    valor se está regalando ese día.
+  const { data: cortesias } = await db
+    .from('paquetes')
+    .select('*, pacientes(nombre, apellidos), tratamientos(nombre)')
+    .eq('fecha_inicio', fecha)
+    .eq('esquema_pago', 'cortesia')
+    .order('created_at', { ascending: true });
+
   // ── Calcular totales por método ──
   const totales = { efectivo: 0, tarjeta: 0, credito: 0, transferencia: 0 };
 
@@ -137,6 +148,7 @@ async function cargarCaja(fecha) {
   const subtotalVisitas = (visitas || []).reduce((s, v) => s + parseFloat(v.monto_cobrado || 0), 0);
   const subtotalAbonos  = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
   const subtotalGastos  = totalGastos;
+  const subtotalCortesias = (cortesias || []).reduce((s, c) => s + parseFloat(c.precio_total || 0), 0);
 
   const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setTexto('caja-subtotal-pagos',   '$' + subtotalPagos.toLocaleString());
@@ -256,8 +268,44 @@ async function cargarCaja(fecha) {
   }
   setTexto('caja-subtotal-gastos', '$' + subtotalGastos.toLocaleString());
 
+  // ── Tabla Cortesías (informativo — no forma parte de los ingresos) ──
+  let tbCortesias = document.getElementById('caja-tabla-cortesias');
+  if (!tbCortesias) {
+    const cajaMod = document.getElementById('mod-caja');
+    if (cajaMod) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.marginTop = '20px';
+      card.innerHTML = `
+        <div class="card-title">🎁 Cortesías otorgadas este día <span style="font-size:10px;opacity:.5;font-weight:400">(no se cuenta como ingreso)</span></div>
+        <table>
+          <tr><th>Paciente</th><th>Tratamiento</th><th>Valor regalado</th></tr>
+          <tbody id="caja-tabla-cortesias"></tbody>
+        </table>
+        <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:#9b59b6;font-weight:600">Subtotal cortesías: <span id="caja-subtotal-cortesias">$0</span></div>`;
+      cajaMod.appendChild(card);
+      tbCortesias = document.getElementById('caja-tabla-cortesias');
+    }
+  }
+
+  if (tbCortesias) {
+    if (!cortesias || cortesias.length === 0) {
+      tbCortesias.innerHTML = `<tr><td colspan="3" style="text-align:center;opacity:.3;padding:12px">Sin cortesías este día</td></tr>`;
+    } else {
+      tbCortesias.innerHTML = cortesias.map(c => {
+        const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos.charAt(0)}.` : '—';
+        return `<tr>
+          <td>${nombre}</td>
+          <td style="font-size:12px;opacity:.7">${c.tratamientos?.nombre || '—'}</td>
+          <td style="color:#9b59b6;font-weight:500">$${parseFloat(c.precio_total).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+  setTexto('caja-subtotal-cortesias', '$' + subtotalCortesias.toLocaleString());
+
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, totales, totalesCaja, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, cortesias, totales, totalesCaja, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos, subtotalCortesias };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -453,6 +501,34 @@ async function descargarCajaPDF() {
     y = imprimirFilaCajaPDF(doc, `${g.categoria} — ${g.descripcion}`, `$${parseFloat(g.monto).toLocaleString()}`, y);
   });
   y = imprimirSubtotalCajaPDF(doc, 'Subtotal Gastos', d.subtotalGastos, y);
+  if (y > 270) { doc.addPage(); y = 20; }
+
+  y += 4;
+  // Cortesías — informativo, no se contabiliza en los ingresos ni en Caja
+  doc.setFontSize(11);
+  doc.setTextColor(155, 89, 182);
+  doc.text('Cortesías otorgadas este día (no se contabiliza como ingreso)', 15, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(60);
+  if (!d.cortesias || d.cortesias.length === 0) {
+    doc.setTextColor(150);
+    doc.text('Sin cortesías este día', 15, y);
+    doc.setTextColor(60);
+    y += 6;
+  } else {
+    d.cortesias.forEach(c => {
+      const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos.charAt(0)}.` : '—';
+      const trat   = c.tratamientos?.nombre || '—';
+      y = imprimirFilaCajaPDF(doc, `${nombre} — ${trat}`, `$${parseFloat(c.precio_total).toLocaleString()}`, y);
+    });
+  }
+  doc.setFontSize(9.5);
+  doc.setTextColor(155, 89, 182);
+  if (y > 270) { doc.addPage(); y = 20; }
+  doc.text('Subtotal Cortesías:', 15, y);
+  doc.text(`$${(d.subtotalCortesias || 0).toLocaleString()}`, 195, y, { align: 'right' });
+  y += 6;
 
   if (y > 265) { doc.addPage(); y = 20; }
   y += 3;

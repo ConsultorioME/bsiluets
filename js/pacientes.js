@@ -191,7 +191,11 @@ async function verPaciente(id, silent = false) {
 
   // ── Stats ──
   const totalSesiones = paquetes ? paquetes.reduce((s, pk) => s + (pk.sesion_actual || 0), 0) : 0;
-  const totalInvertido = paquetes ? paquetes.reduce((s, pk) => s + parseFloat(pk.pagado || 0), 0) : 0;
+  // Las cortesías no son dinero real que la paciente haya invertido — se
+  // excluyen para no inflar este total con tratamientos regalados.
+  const totalInvertido = paquetes
+    ? paquetes.filter(pk => pk.esquema_pago !== 'cortesia').reduce((s, pk) => s + parseFloat(pk.pagado || 0), 0)
+    : 0;
 
   document.getElementById('perfil-sesiones').textContent   = totalSesiones;
   document.getElementById('perfil-invertido').textContent  = '$' + totalInvertido.toLocaleString();
@@ -218,7 +222,11 @@ async function verPaciente(id, silent = false) {
             <div class="pkg-name">
               ${pk.tratamientos?.nombre || 'Tratamiento'} (${pk.total_sesiones} sesiones) —
               <span style="color:var(--gold)">Sesión ${pk.sesion_actual} de ${pk.total_sesiones}</span>
-              ${saldo > 0 ? `<span style="color:#e74c3c;font-size:11px;margin-left:8px">Saldo: $${saldo.toLocaleString()}</span>` : '<span style="color:#27AE60;font-size:11px;margin-left:8px">✓ Liquidado</span>'}
+              ${pk.esquema_pago === 'cortesia'
+                ? '<span style="color:#9b59b6;font-size:11px;margin-left:8px">🎁 PAQUETE DE CORTESÍA</span>'
+                : saldo > 0
+                  ? `<span style="color:#e74c3c;font-size:11px;margin-left:8px">Saldo: $${saldo.toLocaleString()}</span>`
+                  : '<span style="color:#27AE60;font-size:11px;margin-left:8px">✓ Liquidado</span>'}
             </div>
             <div class="session-dots">${dots}</div>
           </div>`;
