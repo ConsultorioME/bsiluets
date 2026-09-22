@@ -23,6 +23,31 @@ let _bloqueosPorDiaCache = {};
 // pasa a "completada") y datos del paciente para el aviso post-guardado.
 let citaEstadoAlAbrir        = null;
 let citaCompletadaPacienteId = null;
+let citaCompletadaId         = null; // id de la cita — se usa para vincular (cita_id) la visita/cobro que se registre desde el aviso, y así poder cuadrar Agenda con Pagos/Paquetes & Visitas.
+
+// ── PERMISOS: SOLO ADMIN PUEDE CANCELAR / ELIMINAR CITAS ──
+// Evita que una cita "Completada" (con tratamiento ya aplicado) se cambie a
+// "Cancelada" o se borre para tapar un cobro que no se registró (robo hormiga).
+function esAdminAgenda() {
+  try {
+    const u = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+    return u.rol === 'admin';
+  } catch (e) {
+    return false;
+  }
+}
+
+// Oculta la opción "Cancelada" del select de Estado para quien no sea Admin.
+function aplicarPermisosEstadoCita() {
+  const opt = document.querySelector('#cita-estado option[value="cancelada"]');
+  if (!opt) return;
+  const esAdmin = esAdminAgenda();
+  opt.hidden   = !esAdmin;
+  opt.disabled = !esAdmin;
+  // Si el select había quedado en "cancelada" (cita cargada antes de este
+  // cambio de permisos) y el usuario no es Admin, no se toca — solo se le
+  // impide dejarla así de nuevo si la cambia y regresa.
+}
 
 // ── ROL DE SOLO LECTURA (p. ej. la doctora, que solo consulta su agenda) ──
 function esRolSoloLectura() {
@@ -202,6 +227,24 @@ async function cargarCitasSemana() {
     bloqueosPorDia[b.fecha] = b;
   });
 
+  // ── CRUCE CON PAGOS / VISITAS: ¿esta cita "Completada" tiene un cobro o
+  // una sesión registrada (cita_id), o sigue sin evidencia de haberse
+  // cobrado? Evita que una cita se marque Completada y el cobro "se le
+  // pase" a la capturista sin que quede visible en la Agenda.
+  const idsCompletadas = (citas || []).filter(c => c.estado === 'completada').map(c => c.id);
+  const citasConRegistro = new Set();
+  if (idsCompletadas.length) {
+    const [{ data: pagosLigados }, { data: visitasLigadas }] = await Promise.all([
+      db.from('pagos').select('cita_id').in('cita_id', idsCompletadas).eq('eliminado', false),
+      db.from('visitas').select('cita_id').in('cita_id', idsCompletadas).eq('eliminado', false),
+    ]);
+    (pagosLigados   || []).forEach(p => p.cita_id && citasConRegistro.add(p.cita_id));
+    (visitasLigadas || []).forEach(v => v.cita_id && citasConRegistro.add(v.cita_id));
+  }
+  (citas || []).forEach(c => {
+    c._sinRegistro = c.estado === 'completada' && !citasConRegistro.has(c.id);
+  });
+
   const citasPorDia = {};
   (citas || []).forEach(c => {
     if (!citasPorDia[c.fecha]) citasPorDia[c.fecha] = [];
@@ -283,9 +326,13 @@ function renderSemanaGrid(citasPorDia, bloqueosPorDia) {
       const trat   = c.tratamientos?.nombre || '';
       const horaTxt = c.hora?.substring(0, 5) || '';
       const clickAttr = soloLectura ? '' : `onclick="event.stopPropagation();editarCita('${c.id}')"`;
+      const avisoSinRegistro = c._sinRegistro
+        ? `<span title="Completada sin cobro ni visita registrada en Pagos/Paquetes & Visitas" style="position:absolute;top:2px;right:3px;font-size:10px;line-height:1;text-shadow:0 0 2px #000">⚠️</span>`
+        : '';
       return `<div ${clickAttr}
-                title="${horaTxt} — ${nombre} — ${trat}"
+                title="${horaTxt} — ${nombre} — ${trat}${c._sinRegistro ? ' — ⚠ sin cobro/visita registrada' : ''}"
                 style="position:absolute;left:2px;right:2px;top:${top}px;height:${alto}px;background:${color};border-radius:3px;padding:3px 5px;overflow:hidden;cursor:${soloLectura ? 'default' : 'pointer'};font-size:10px;line-height:1.25;color:#1a1a1a;font-family:'Inter',sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.3);z-index:1">
+                ${avisoSinRegistro}
                 <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${horaTxt} ${nombre}</strong>
                 <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.75">${trat}</span>
               </div>`;
@@ -380,9 +427,12 @@ function renderVistaMovil(citasPorDia, bloqueosPorDia) {
       const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos}` : 'Sin paciente';
       const trat   = c.tratamientos?.nombre || '';
       const clickAttr = soloLectura ? '' : `onclick="editarCita('${c.id}')"`;
+      const avisoSinRegistro = c._sinRegistro
+        ? `<span title="Completada sin cobro ni visita registrada en Pagos/Paquetes & Visitas" style="font-size:13px;margin-left:4px">⚠️</span>`
+        : '';
       return `<div class="appt-card" ${clickAttr}>
                 <div class="appt-time"><div class="h">${h}</div><div class="m">${ampm}</div></div>
-                <div class="appt-body"><div class="appt-name">${nombre}</div><div class="appt-trat">${trat}</div></div>
+                <div class="appt-body"><div class="appt-name">${nombre}${avisoSinRegistro}</div><div class="appt-trat">${trat}</div></div>
                 <div class="appt-status" style="background:${color}"></div>
               </div>`;
     }).join('');
@@ -489,8 +539,16 @@ async function guardarCita() {
     notas:          document.getElementById('cita-notas').value.trim(),
     agenda_tipo:    agendaActiva,
   };
-  if (!datos.fecha) { showToast('⚠ La fecha es obligatoria'); return; }
-  if (!datos.hora)  { showToast('⚠ La hora es obligatoria'); return; }
+  if (!datos.fecha)          { showToast('⚠ La fecha es obligatoria'); return; }
+  if (!datos.hora)           { showToast('⚠ La hora es obligatoria'); return; }
+  if (!datos.tratamiento_id) { showToast('⚠ El tratamiento es obligatorio'); return; }
+
+  // Solo un Admin puede dejar una cita como "Cancelada" — evita que se use
+  // para tapar una cita ya atendida (y su cobro) sin dejar rastro.
+  if (datos.estado === 'cancelada' && !esAdminAgenda()) {
+    showToast('🔒 Solo un Administrador puede cancelar una cita');
+    return;
+  }
 
   const bloqueo = verificarFechaBloqueada(datos.fecha);
   if (bloqueo) {
@@ -503,11 +561,13 @@ async function guardarCita() {
     return;
   }
 
-  let error;
+  let error, citaId = id;
   if (id) {
     ({ error } = await db.from('agenda').update(datos).eq('id', id));
   } else {
-    ({ error } = await db.from('agenda').insert([datos]));
+    const { data: citaInsertada, error: errIns } = await db.from('agenda').insert([datos]).select('id').single();
+    error  = errIns;
+    citaId = citaInsertada?.id || null;
   }
   if (error) { showToast('❌ Error: ' + error.message); return; }
 
@@ -516,7 +576,9 @@ async function guardarCita() {
 
   // ¿La cita acaba de pasar a "Completada"? Si tiene paciente asociado,
   // ofrecemos ir directo a registrar el cobro/visita en Paquetes & Visitas
-  // para que no se le olvide a la capturista.
+  // para que no se le olvide a la capturista. Guardamos el id de la cita
+  // para que, si se registra, quede vinculada (cita_id) y así poder cuadrar
+  // Agenda con Pagos/Paquetes & Visitas más adelante.
   const pasoACompletada = datos.estado === 'completada' && citaEstadoAlAbrir !== 'completada';
   let pacienteNombre = '';
   if (pasoACompletada && datos.paciente_id) {
@@ -532,7 +594,7 @@ async function guardarCita() {
   await cargarCitasSemana();
 
   if (pasoACompletada && datos.paciente_id) {
-    mostrarAvisoCitaCompletada(datos.paciente_id, pacienteNombre);
+    mostrarAvisoCitaCompletada(datos.paciente_id, pacienteNombre, citaId);
   }
 }
 
@@ -552,6 +614,7 @@ async function editarCita(id) {
   document.getElementById('cita-estado').value      = c.estado || 'pendiente';
   document.getElementById('cita-notas').value       = c.notas || '';
   citaEstadoAlAbrir = c.estado || 'pendiente';
+  aplicarPermisosEstadoCita();
 
   document.querySelector('#modal-nueva-cita .modal-title').textContent = 'Editar Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');
@@ -560,11 +623,19 @@ async function editarCita(id) {
 }
 
 // ── AVISO: CITA COMPLETADA → REGISTRAR VISITA/COBRO ──
-function mostrarAvisoCitaCompletada(pacienteId, pacienteNombre) {
+function mostrarAvisoCitaCompletada(pacienteId, pacienteNombre, citaId) {
   citaCompletadaPacienteId = pacienteId;
+  citaCompletadaId         = citaId || null;
   const nombreEl = document.getElementById('cita-completada-paciente');
   if (nombreEl) nombreEl.textContent = pacienteNombre || 'el paciente';
   openModal('cita-completada');
+}
+
+// ── DESCARTAR EL AVISO SIN REGISTRAR NADA ──
+function descartarAvisoCitaCompletada() {
+  closeModal('cita-completada');
+  citaCompletadaPacienteId = null;
+  citaCompletadaId         = null;
 }
 
 // ── IR A REGISTRAR LA VISITA/COBRO EN PAQUETES & VISITAS ──
@@ -582,6 +653,8 @@ async function irARegistrarVisitaDesdeAgenda() {
     await cargarPaqueteVis();
     sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+  // citaCompletadaId queda disponible para que generarNotaVis() (paquetes.js)
+  // vincule (cita_id) la visita que se registre a continuación con esta cita.
 }
 
 // ── ELIMINAR CITA DESDE EL MODAL DE EDICIÓN ──
@@ -590,6 +663,12 @@ async function eliminarCitaDesdeModal() {
   const id = document.getElementById('cita-id').value;
   if (!id) return;
   if (!confirm('¿Seguro que quieres eliminar esta cita? Esta acción no se puede deshacer.')) return;
+
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar una cita requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
   const { error } = await db.from('agenda').delete().eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
   closeModal('nueva-cita');
@@ -602,6 +681,12 @@ async function eliminarCitaDesdeModal() {
 async function eliminarCita(id) {
   if (esRolSoloLectura()) { showToast('🔒 Tu usuario solo tiene acceso de lectura a la Agenda'); return; }
   if (!confirm('¿Eliminar esta cita?')) return;
+
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar una cita requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
   const { error } = await db.from('agenda').delete().eq('id', id);
   if (error) { showToast('❌ Error: ' + error.message); return; }
   showToast('✓ Cita eliminada');
@@ -615,6 +700,7 @@ function limpiarFormCita() {
   document.getElementById('cita-estado').value   = 'pendiente';
   document.getElementById('cita-duracion').value = '60';
   citaEstadoAlAbrir = null;
+  aplicarPermisosEstadoCita();
   const titulo = document.querySelector('#modal-nueva-cita .modal-title');
   if (titulo) titulo.textContent = 'Nueva Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');

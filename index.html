@@ -1029,7 +1029,7 @@
             <option value="">Seleccionar...</option>
           </select>
         </div>
-        <div class="fg"><label>Tratamiento</label>
+        <div class="fg"><label>Tratamiento <span style="color:#e74c3c">*</span></label>
           <select id="cita-tratamiento">
             <option value="">Seleccionar...</option>
           </select>
@@ -1293,14 +1293,14 @@
 <!-- MODAL: CITA COMPLETADA → REGISTRAR VISITA/COBRO -->
 <div class="modal-overlay" id="modal-cita-completada">
   <div class="modal" style="max-width:380px">
-    <button class="modal-close" onclick="closeModal('cita-completada')">×</button>
+    <button class="modal-close" onclick="descartarAvisoCitaCompletada()">×</button>
     <div class="modal-title">✓ Cita completada</div>
     <div style="font-size:12px;color:var(--cream);opacity:.7;margin-bottom:20px">
       La cita de <strong id="cita-completada-paciente" style="color:var(--gold)">el paciente</strong> se marcó como completada.
       ¿Quieres registrar ahora su visita/cobro en <strong>Paquetes &amp; Visitas</strong>?
     </div>
     <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('cita-completada')">Ahora no</button>
+      <button class="btn-outline" onclick="descartarAvisoCitaCompletada()">Ahora no</button>
       <button class="btn-primary" onclick="irARegistrarVisitaDesdeAgenda()">Registrar visita</button>
     </div>
   </div>

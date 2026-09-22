@@ -611,6 +611,17 @@ async function generarNotaVis() {
   const metodo = obtenerMetodosVis();
   const nuevaSesion = paqSelData.sesion_actual + 1;
 
+  // Si venimos del aviso "Cita completada → Registrar visita" (agenda.js) y
+  // el paciente seleccionado sigue siendo el mismo de esa cita, vinculamos
+  // la visita a la cita (cita_id) para poder cuadrar Agenda con Paquetes &
+  // Visitas. Si el usuario cambió de paciente en el formulario, no se liga
+  // a una cita ajena.
+  const citaOrigenId = (typeof citaCompletadaId !== 'undefined'
+    && citaCompletadaId
+    && citaCompletadaPacienteId === paqSelData.paciente_id)
+    ? citaCompletadaId
+    : null;
+
   // 1. Registrar visita
   const { error: errVisita } = await db.from('visitas').insert([{
     paquete_id:          paqSelData.id,
@@ -620,8 +631,13 @@ async function generarNotaVis() {
     monto_cobrado:       monto,
     metodo_pago: tipoPago === 'no' ? null : metodo,
     folio:               'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100),
+    cita_id:             citaOrigenId,
   }]);
   if (errVisita) { showToast('❌ Error al registrar visita: ' + errVisita.message); return; }
+
+  // Ya se usó (o no aplicaba) — se limpia para no vincular por error la
+  // siguiente visita que se registre manualmente.
+  if (typeof citaCompletadaId !== 'undefined') { citaCompletadaId = null; citaCompletadaPacienteId = null; }
 
   // 2. Actualizar sesion_actual y pagado en paquete
   const nuevoPagado = paqSelData.pagado + monto;
