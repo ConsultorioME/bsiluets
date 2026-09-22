@@ -19,6 +19,11 @@ window._fechasBloqueadasData = {};
 let _citasPorDiaCache    = {};
 let _bloqueosPorDiaCache = {};
 
+// Estado original de la cita que se está editando (para detectar cuándo
+// pasa a "completada") y datos del paciente para el aviso post-guardado.
+let citaEstadoAlAbrir        = null;
+let citaCompletadaPacienteId = null;
+
 // ── ROL DE SOLO LECTURA (p. ej. la doctora, que solo consulta su agenda) ──
 function esRolSoloLectura() {
   try {
@@ -508,12 +513,27 @@ async function guardarCita() {
 
   closeModal('nueva-cita');
   showToast(id ? '✓ Cita actualizada' : '✓ Cita agendada correctamente');
+
+  // ¿La cita acaba de pasar a "Completada"? Si tiene paciente asociado,
+  // ofrecemos ir directo a registrar el cobro/visita en Paquetes & Visitas
+  // para que no se le olvide a la capturista.
+  const pasoACompletada = datos.estado === 'completada' && citaEstadoAlAbrir !== 'completada';
+  let pacienteNombre = '';
+  if (pasoACompletada && datos.paciente_id) {
+    const selPac = document.getElementById('cita-paciente');
+    pacienteNombre = selPac?.options[selPac.selectedIndex]?.text || '';
+  }
+
   limpiarFormCita();
 
   // Si la cita cae fuera de la semana visible, saltamos a esa semana
   const fechaCita = new Date(datos.fecha + 'T12:00:00');
   semanaInicio = getLunesSemana(fechaCita);
   await cargarCitasSemana();
+
+  if (pasoACompletada && datos.paciente_id) {
+    mostrarAvisoCitaCompletada(datos.paciente_id, pacienteNombre);
+  }
 }
 
 // ── EDITAR CITA ──
@@ -531,11 +551,37 @@ async function editarCita(id) {
   document.getElementById('cita-duracion').value    = c.duracion_min || 60;
   document.getElementById('cita-estado').value      = c.estado || 'pendiente';
   document.getElementById('cita-notas').value       = c.notas || '';
+  citaEstadoAlAbrir = c.estado || 'pendiente';
 
   document.querySelector('#modal-nueva-cita .modal-title').textContent = 'Editar Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');
   if (btnEliminar) btnEliminar.style.display = 'inline-block';
   openModal('nueva-cita');
+}
+
+// ── AVISO: CITA COMPLETADA → REGISTRAR VISITA/COBRO ──
+function mostrarAvisoCitaCompletada(pacienteId, pacienteNombre) {
+  citaCompletadaPacienteId = pacienteId;
+  const nombreEl = document.getElementById('cita-completada-paciente');
+  if (nombreEl) nombreEl.textContent = pacienteNombre || 'el paciente';
+  openModal('cita-completada');
+}
+
+// ── IR A REGISTRAR LA VISITA/COBRO EN PAQUETES & VISITAS ──
+async function irARegistrarVisitaDesdeAgenda() {
+  const pacienteId = citaCompletadaPacienteId;
+  closeModal('cita-completada');
+  if (!pacienteId) return;
+
+  showModule('paquetes', document.querySelector('.nav-item[onclick*="paquetes"]'));
+  await initPaquetes();
+
+  const sel = document.getElementById('vis-paciente');
+  if (sel) {
+    sel.value = pacienteId;
+    await cargarPaqueteVis();
+    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 // ── ELIMINAR CITA DESDE EL MODAL DE EDICIÓN ──
@@ -568,6 +614,7 @@ function limpiarFormCita() {
   ['cita-paciente', 'cita-tratamiento'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('cita-estado').value   = 'pendiente';
   document.getElementById('cita-duracion').value = '60';
+  citaEstadoAlAbrir = null;
   const titulo = document.querySelector('#modal-nueva-cita .modal-title');
   if (titulo) titulo.textContent = 'Nueva Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');

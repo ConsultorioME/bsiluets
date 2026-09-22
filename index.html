@@ -1164,6 +1164,8 @@
     <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
       <div class="fg"><label>No. sesiones</label>
         <select id="npaq-sesiones" onchange="calcTotalPaq()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none;width:100%">
+
+          <option value="1">1 sesión</option>
           <option value="4">4 sesiones</option>
           <option value="8">8 sesiones</option>
           <option value="10">10 sesiones</option>
@@ -1284,6 +1286,22 @@
     <div class="modal-actions">
       <button class="btn-outline" onclick="cancelarConfirmacionAdmin()">Cancelar</button>
       <button class="btn-primary" onclick="validarConfirmacionAdmin()">Autorizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CITA COMPLETADA → REGISTRAR VISITA/COBRO -->
+<div class="modal-overlay" id="modal-cita-completada">
+  <div class="modal" style="max-width:380px">
+    <button class="modal-close" onclick="closeModal('cita-completada')">×</button>
+    <div class="modal-title">✓ Cita completada</div>
+    <div style="font-size:12px;color:var(--cream);opacity:.7;margin-bottom:20px">
+      La cita de <strong id="cita-completada-paciente" style="color:var(--gold)">el paciente</strong> se marcó como completada.
+      ¿Quieres registrar ahora su visita/cobro en <strong>Paquetes &amp; Visitas</strong>?
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('cita-completada')">Ahora no</button>
+      <button class="btn-primary" onclick="irARegistrarVisitaDesdeAgenda()">Registrar visita</button>
     </div>
   </div>
 </div>
