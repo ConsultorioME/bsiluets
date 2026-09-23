@@ -24,7 +24,8 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ─────────────────────────────────────────
 const TABLAS_REALTIME = [
   'pacientes', 'pagos', 'abonos', 'paquetes', 'visitas',
-  'tratamientos', 'inventario', 'gastos', 'agenda', 'fechas_bloqueadas'
+  'tratamientos', 'inventario', 'gastos', 'agenda', 'fechas_bloqueadas',
+  'saldos_favor'
 ];
 
 let _realtimeIniciado = false;

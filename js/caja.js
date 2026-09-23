@@ -81,6 +81,20 @@ async function cargarCaja(fecha) {
     .eq('esquema_pago', 'cortesia')
     .order('created_at', { ascending: true });
 
+  // 6. Saldos a favor del día (ver js/saldos_favor.js): depósitos (anticipos
+  //    y excedentes de cobros) SÍ son dinero que entró hoy; devoluciones es
+  //    dinero que salió. Las aplicaciones NO se traen: usar saldo a favor en
+  //    un cobro no es dinero nuevo (en `pagos` aparece como método
+  //    "saldo_favor", que parsearMetodo ignora).
+  const { data: saldosFavorRaw } = await db
+    .from('saldos_favor')
+    .select('*, pacientes(nombre, apellidos)')
+    .eq('fecha', fecha)
+    .eq('eliminado', false)
+    .in('tipo', ['deposito', 'devolucion'])
+    .order('created_at', { ascending: true });
+  const saldosFavor = saldosFavorRaw || [];
+
   // ── Calcular totales por método ──
   const totales = { efectivo: 0, tarjeta: 0, credito: 0, transferencia: 0 };
 
@@ -124,6 +138,13 @@ async function cargarCaja(fecha) {
     }
   });
 
+  const devolucionesSF = { efectivo: 0, tarjeta: 0, credito: 0, transferencia: 0 };
+  saldosFavor.forEach(m => {
+    if (m.tipo === 'deposito') parsearMetodo(m.metodo_pago, m.monto);
+    else parsearMetodo(m.metodo_pago, m.monto, devolucionesSF);
+  });
+  Object.keys(devolucionesSF).forEach(k => { totales[k] -= devolucionesSF[k]; });
+
   // Totales "de caja física" — todo el dinero que efectivamente entró por
   // cada método ese día, incluyendo abonos a créditos (a diferencia de
   // `totales`, que los excluye para no duplicarlos en Total Ingresos/
@@ -149,6 +170,7 @@ async function cargarCaja(fecha) {
   const subtotalAbonos  = (abonos || []).reduce((s, a) => s + parseFloat(a.monto || 0), 0);
   const subtotalGastos  = totalGastos;
   const subtotalCortesias = (cortesias || []).reduce((s, c) => s + parseFloat(c.precio_total || 0), 0);
+  const subtotalSaldosFavor = saldosFavor.reduce((s, m) => s + (m.tipo === 'deposito' ? 1 : -1) * parseFloat(m.monto || 0), 0);
 
   const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setTexto('caja-subtotal-pagos',   '$' + subtotalPagos.toLocaleString());
@@ -166,7 +188,7 @@ async function cargarCaja(fecha) {
     if (!pagos || pagos.length === 0) {
       tbPagos.innerHTML = `<tr><td colspan="4" style="text-align:center;opacity:.3;padding:12px">Sin cobros este día</td></tr>`;
     } else {
-      const metBadge = { efectivo:'badge-green', tarjeta:'badge-blue', credito:'badge-gold', transferencia:'badge-gray' };
+      const metBadge = { efectivo:'badge-green', tarjeta:'badge-blue', credito:'badge-gold', transferencia:'badge-gray', saldo_favor:'badge-green' };
       tbPagos.innerHTML = pagos.map(p => {
         const nombre = p.pacientes ? `${p.pacientes.nombre} ${p.pacientes.apellidos.charAt(0)}.` : '—';
         const metodo = p.metodo_pago?.includes('|') 
@@ -304,8 +326,50 @@ async function cargarCaja(fecha) {
   }
   setTexto('caja-subtotal-cortesias', '$' + subtotalCortesias.toLocaleString());
 
+  // ── Tabla Saldos a favor (anticipos / excedentes / devoluciones) ──
+  let tbSaldosFavor = document.getElementById('caja-tabla-saldos-favor');
+  if (!tbSaldosFavor) {
+    const cajaMod = document.getElementById('mod-caja');
+    if (cajaMod) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.marginTop = '20px';
+      card.innerHTML = `
+        <div class="card-title">💰 Saldos a favor del día <span style="font-size:10px;opacity:.5;font-weight:400">(anticipos y excedentes que dejaron los pacientes, menos devoluciones)</span></div>
+        <table>
+          <tr><th>Paciente</th><th>Tipo</th><th>Referencia</th><th>Método</th><th>Monto</th></tr>
+          <tbody id="caja-tabla-saldos-favor"></tbody>
+        </table>
+        <div style="text-align:right;padding:12px 4px 2px;font-size:13px;color:#27AE60;font-weight:600">Subtotal: <span id="caja-subtotal-saldos-favor">$0</span></div>`;
+      // Justo después de "Abonos a adeudos": es dinero del día, no informativo
+      const cardAbonos = document.getElementById('caja-tabla-abonos')?.closest('.card');
+      if (cardAbonos) cardAbonos.after(card); else cajaMod.appendChild(card);
+      tbSaldosFavor = document.getElementById('caja-tabla-saldos-favor');
+    }
+  }
+
+  if (tbSaldosFavor) {
+    if (saldosFavor.length === 0) {
+      tbSaldosFavor.innerHTML = `<tr><td colspan="5" style="text-align:center;opacity:.3;padding:12px">Sin saldos a favor este día</td></tr>`;
+    } else {
+      const metBadge = { efectivo:'badge-green', tarjeta:'badge-blue', transferencia:'badge-gray' };
+      tbSaldosFavor.innerHTML = saldosFavor.map(m => {
+        const nombre = m.pacientes ? `${m.pacientes.nombre} ${m.pacientes.apellidos.charAt(0)}.` : '—';
+        const esDep  = m.tipo === 'deposito';
+        return `<tr>
+          <td>${nombre}</td>
+          <td><span class="badge ${esDep ? 'badge-green' : 'badge-red'}" style="font-size:10px">${esDep ? 'Depósito' : 'Devolución'}</span></td>
+          <td style="font-size:12px;opacity:.7">${m.referencia || '—'}</td>
+          <td><span class="badge ${metBadge[m.metodo_pago] || 'badge-gray'}" style="font-size:10px">${m.metodo_pago || '—'}</span></td>
+          <td style="color:${esDep ? '#27AE60' : '#e74c3c'};font-weight:500">${esDep ? '' : '-'}$${parseFloat(m.monto).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+  setTexto('caja-subtotal-saldos-favor', (subtotalSaldosFavor < 0 ? '-$' : '$') + Math.abs(subtotalSaldosFavor).toLocaleString());
+
   // Guardar datos para PDF
-  window._cajaData = { fecha, pagos, visitas, abonos, gastos, cortesias, totales, totalesCaja, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos, subtotalCortesias };
+  window._cajaData = { fecha, pagos, visitas, abonos, gastos, cortesias, saldosFavor, totales, totalesCaja, totalIngresos, totalGastos, utilidad, abonosACreditos, subtotalPagos, subtotalVisitas, subtotalAbonos, subtotalGastos, subtotalCortesias, subtotalSaldosFavor };
 }
 
 // Carga una imagen (misma ruta que usan las notas de venta) y la convierte
@@ -487,6 +551,30 @@ async function descargarCajaPDF() {
     });
   }
   y = imprimirSubtotalCajaPDF(doc, 'Subtotal Abonos a adeudos', d.subtotalAbonos, y);
+  if (y > 270) { doc.addPage(); y = 20; }
+
+  y += 4;
+  // Saldos a favor (anticipos / excedentes / devoluciones)
+  doc.setFontSize(11);
+  doc.setTextColor(201, 168, 108);
+  doc.text('Saldos a favor (anticipos y devoluciones)', 15, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(60);
+  if (!d.saldosFavor || d.saldosFavor.length === 0) {
+    doc.setTextColor(150);
+    doc.text('Sin saldos a favor este día', 15, y);
+    doc.setTextColor(60);
+    y += 6;
+  } else {
+    d.saldosFavor.forEach(m => {
+      const nombre = m.pacientes ? `${m.pacientes.nombre} ${m.pacientes.apellidos.charAt(0)}.` : '—';
+      const esDep  = m.tipo === 'deposito';
+      const texto  = `${nombre} — ${esDep ? 'Depósito' : 'Devolución'}: ${m.referencia || '—'} (${m.metodo_pago || '—'})`;
+      y = imprimirFilaCajaPDF(doc, texto, `${esDep ? '' : '-'}$${parseFloat(m.monto).toLocaleString()}`, y);
+    });
+  }
+  y = imprimirSubtotalCajaPDF(doc, 'Subtotal Saldos a favor', d.subtotalSaldosFavor, y);
   if (y > 270) { doc.addPage(); y = 20; }
 
   y += 4;

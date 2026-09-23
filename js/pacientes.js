@@ -170,6 +170,14 @@ async function verPaciente(id, silent = false) {
       : '';
   }
 
+  // Saldo a favor (dinero que el paciente dejó para su próxima visita)
+  const elSaldoFavor = document.getElementById('perfil-saldo-favor');
+  if (elSaldoFavor && typeof obtenerSaldoFavor === 'function') {
+    const saldoFavor = await obtenerSaldoFavor(id);
+    elSaldoFavor.textContent = saldoFavor > 0.5 ? '$' + saldoFavor.toLocaleString() : '—';
+    elSaldoFavor.style.color = saldoFavor > 0.5 ? '#27AE60' : '';
+  }
+
   // Guardar para poder generar la imagen de "Adeudo Total" bajo demanda
   adeudoActual = {
     nombre: `${p.nombre} ${p.apellidos}`,

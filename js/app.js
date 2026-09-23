@@ -412,7 +412,7 @@ async function cargarEliminados() {
   const tbody = document.getElementById('tabla-eliminados');
   if (!tbody) return;
 
-  const [{ data: cobros }, { data: notas }, { data: abonos }] = await Promise.all([
+  const [{ data: cobros }, { data: notas }, { data: abonos }, { data: saldosFavor }] = await Promise.all([
     db.from('pagos')
       .select('*, pacientes(nombre, apellidos)')
       .eq('eliminado', true)
@@ -422,6 +422,10 @@ async function cargarEliminados() {
       .eq('eliminado', true)
       .order('eliminado_at', { ascending: false }),
     db.from('abonos')
+      .select('*, pacientes(nombre, apellidos)')
+      .eq('eliminado', true)
+      .order('eliminado_at', { ascending: false }),
+    db.from('saldos_favor')
       .select('*, pacientes(nombre, apellidos)')
       .eq('eliminado', true)
       .order('eliminado_at', { ascending: false }),
@@ -457,6 +461,16 @@ async function cargarEliminados() {
       monto:     parseFloat(a.monto) || 0,
       por:       a.eliminado_por,
       at:        a.eliminado_at,
+    })),
+    ...(saldosFavor || []).map(m => ({
+      tipo:      'Saldo a favor',
+      badge:     'badge-green',
+      fecha:     m.fecha || '—',
+      nombre:    m.pacientes ? `${m.pacientes.nombre} ${m.pacientes.apellidos}` : '—',
+      concepto:  `${{ deposito: 'Depósito', aplicacion: 'Aplicación', devolucion: 'Devolución' }[m.tipo] || m.tipo}: ${m.referencia || '—'}`,
+      monto:     parseFloat(m.monto) || 0,
+      por:       m.eliminado_por,
+      at:        m.eliminado_at,
     })),
   ].sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
 

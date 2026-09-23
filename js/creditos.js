@@ -9,6 +9,7 @@
 
 async function initCreditos() {
   await cargarCreditos();
+  if (typeof cargarSaldosFavor === 'function') await cargarSaldosFavor();
 }
 
 // ── BÚSQUEDA (cliente, sobre datos ya cargados) ──
@@ -419,6 +420,21 @@ async function eliminarAbono(id, pagoId) {
   }).eq('id', id);
 
   if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  // Si el abono se pagó con saldo a favor (pago inicial de un cobro a
+  // crédito), se elimina también esa aplicación para regresarle el saldo.
+  const { data: abonoElim } = await db.from('abonos').select('metodo_pago, monto, pago_id').eq('id', id).single();
+  if (abonoElim && abonoElim.metodo_pago === 'saldo_favor' && abonoElim.pago_id) {
+    const { data: aplicacion } = await db.from('saldos_favor').select('id')
+      .eq('pago_id', abonoElim.pago_id).eq('tipo', 'aplicacion').eq('monto', abonoElim.monto).eq('eliminado', false).limit(1);
+    if (aplicacion && aplicacion.length > 0) {
+      await db.from('saldos_favor').update({
+        eliminado:     true,
+        eliminado_por: usuario.usuario || 'admin',
+        eliminado_at:  new Date().toISOString(),
+      }).eq('id', aplicacion[0].id);
+    }
+  }
 
   // Si el abono eliminado era el que liquidaba un cobro a crédito, hay que
   // reabrirlo (ya no está totalmente cubierto).

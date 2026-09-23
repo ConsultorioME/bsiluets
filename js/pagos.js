@@ -7,6 +7,8 @@ let metodoSeleccionado = 'efectivo';
 let tratCounter = 0;
 let medicCounter = 0;
 let suplCounter = 0;
+// Saldo a favor disponible del paciente seleccionado en el formulario de cobro
+let saldoFavorPagoDisponible = 0;
 
 // ── INICIALIZAR PAGOS ──
 async function initPagos() {
@@ -26,7 +28,115 @@ async function cargarSelectPacientesPagos() {
   if (sel && data) {
     sel.innerHTML = '<option value="">Seleccionar paciente...</option>' +
       data.map(p => `<option value="${p.id}">${p.nombre} ${p.apellidos}</option>`).join('');
+    sel.onchange = onCambioPacientePago;
   }
+  await onCambioPacientePago();
+}
+
+// ── SALDO A FAVOR DEL PACIENTE (ver js/saldos_favor.js) ──
+// Al elegir paciente se consulta su saldo a favor y, si tiene, se muestra
+// un aviso con botón para aplicarlo como método de pago "Saldo a favor".
+async function onCambioPacientePago() {
+  const pacienteId = document.getElementById('pago-paciente')?.value;
+  saldoFavorPagoDisponible = pacienteId && typeof obtenerSaldoFavor === 'function'
+    ? await obtenerSaldoFavor(pacienteId)
+    : 0;
+
+  // Renglones de saldo a favor capturados para otro paciente ya no aplican
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach(sel => {
+    if (sel.value === 'saldo_favor') {
+      sel.value = '';
+      const monto = sel.parentElement.querySelector('.metodo-monto');
+      if (monto) monto.value = '';
+    }
+  });
+  actualizarOpcionesSaldoFavor();
+  pintarAvisoSaldoFavorPago();
+  recalcMetodos();
+}
+
+function pintarAvisoSaldoFavorPago() {
+  const aviso = document.getElementById('pago-saldo-favor-aviso');
+  if (!aviso) return;
+  if (saldoFavorPagoDisponible > 0.5) {
+    aviso.innerHTML = `💰 Este paciente tiene <strong>$${saldoFavorPagoDisponible.toLocaleString()}</strong> de saldo a favor
+      <button type="button" class="tb-btn" style="padding:3px 10px;font-size:10px;margin-left:8px" onclick="aplicarSaldoFavorPago()">Aplicar</button>`;
+    aviso.style.display = '';
+  } else {
+    aviso.innerHTML = '';
+    aviso.style.display = 'none';
+  }
+}
+
+// Opciones del selector de método; "Saldo a favor" solo si el paciente tiene.
+function opcionesMetodoPagoHTML(seleccion) {
+  const opciones = [
+    ['efectivo', '💵 Efectivo'],
+    ['tarjeta', '💳 Tarjeta'],
+    ['transferencia', '🏦 Transferencia'],
+  ];
+  if (saldoFavorPagoDisponible > 0.5) opciones.push(['saldo_favor', `💰 Saldo a favor ($${saldoFavorPagoDisponible.toLocaleString()})`]);
+  return `<option value="" ${!seleccion ? 'selected' : ''} disabled>Selecciona método...</option>` +
+    opciones.map(([v, l]) => `<option value="${v}" ${seleccion === v ? 'selected' : ''}>${l}</option>`).join('');
+}
+
+// Agrega/quita la opción "Saldo a favor" en los selectores ya pintados
+function actualizarOpcionesSaldoFavor() {
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach(sel => {
+    const actual = sel.value;
+    sel.innerHTML = opcionesMetodoPagoHTML(actual === 'saldo_favor' && saldoFavorPagoDisponible <= 0.5 ? '' : actual);
+    sel.onchange = recalcMetodos;
+  });
+}
+
+// Usa el saldo a favor para cubrir lo que falta del total (hasta donde alcance)
+function aplicarSaldoFavorPago() {
+  if (saldoFavorPagoDisponible <= 0.5) return;
+  const totalCobro = parseFloat(document.getElementById('tot-total').textContent.replace(/[$,]/g,'')) || 0;
+  if (totalCobro <= 0) { showToast('⚠ Primero agrega los tratamientos o productos a cobrar'); return; }
+
+  const cont = document.getElementById('metodos-pago-container');
+  let filaSaldo = null;
+  let pagadoOtros = 0;
+  cont.querySelectorAll('.metodo-sel').forEach(sel => {
+    const monto = parseFloat(sel.parentElement.querySelector('.metodo-monto')?.value || 0);
+    if (sel.value === 'saldo_favor') filaSaldo = sel.parentElement;
+    else pagadoOtros += monto;
+  });
+
+  const aplicar = Math.min(saldoFavorPagoDisponible, Math.max(0, totalCobro - pagadoOtros));
+  if (aplicar <= 0) { showToast('⚠ El total ya está cubierto con los otros métodos de pago'); return; }
+
+  if (!filaSaldo) {
+    // Reusar el primer renglón si está vacío; si no, agregar uno nuevo
+    const primera = cont.querySelector('.metodo-sel');
+    const primeraMonto = primera?.parentElement.querySelector('.metodo-monto');
+    if (primera && !primera.value && !parseFloat(primeraMonto?.value || 0)) {
+      filaSaldo = primera.parentElement;
+    } else {
+      agregarMetodoPago();
+      filaSaldo = cont.lastElementChild;
+    }
+  }
+  filaSaldo.querySelector('.metodo-sel').value   = 'saldo_favor';
+  filaSaldo.querySelector('.metodo-monto').value = aplicar;
+  recalcMetodos();
+}
+
+function redondear2(n) {
+  return Math.round((parseFloat(n) || 0) * 100) / 100;
+}
+
+const METODO_PAGO_LABEL = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia', saldo_favor:'Saldo a favor' };
+
+// "efectivo" o "efectivo:600|saldo_favor:200" → texto legible para la nota
+function formatearMetodoPagoNota(metodoPago) {
+  if (!metodoPago) return '—';
+  if (!metodoPago.includes(':')) return METODO_PAGO_LABEL[metodoPago] || metodoPago;
+  return metodoPago.split('|').map(m => {
+    const [met, mon] = m.split(':');
+    return `${METODO_PAGO_LABEL[met] || met} $${parseFloat(mon).toLocaleString()}`;
+  }).join(' + ');
 }
 
 async function cargarSelectTratamientosPagos() {
@@ -292,18 +402,23 @@ async function registrarCobro() {
   }
 
   const folio      = 'NV-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
-  const metodoPago     = obtenerMetodosPago();
   const metodoDetalle  = obtenerMetodosPagoDetalle();
   const montoPagado    = metodoDetalle.reduce((s, m) => s + m.monto, 0);
   const tipoCobro      = document.querySelector('input[name="tipo-cobro"]:checked')?.value || 'contado';
   const esCredito      = tipoCobro === 'credito';
   const saldoPendiente = Math.max(0, total - montoPagado);
 
+  // Saldo a favor: lo que se paga CON saldo (aplicación) y lo que el
+  // paciente pagó DE MÁS (excedente → queda como depósito a su favor).
+  const saldoAplicado = redondear2(metodoDetalle.filter(m => m.metodo === 'saldo_favor').reduce((s, m) => s + m.monto, 0));
+  const excedente     = montoPagado - total > 0.5 ? redondear2(montoPagado - total) : 0;
+
   // "Contado" implica que se cubre el total; si el monto capturado en
   // Método de pago no alcanza, la nota quedaría incongruente (total distinto
   // a lo realmente cobrado) sin dejar rastro del adeudo. Se pide corregir el
-  // monto o cambiar a "A crédito".
-  if (!esCredito && Math.abs(montoPagado - total) > 0.5) {
+  // monto o cambiar a "A crédito". Pagar DE MÁS sí se permite: el excedente
+  // queda como saldo a favor del paciente.
+  if (!esCredito && total - montoPagado > 0.5) {
     showToast('⚠ El monto en Método de pago no coincide con el total. Ajústalo o marca "A crédito".');
     return;
   }
@@ -311,6 +426,46 @@ async function registrarCobro() {
     showToast('⚠ El monto capturado en Método de pago supera el total del cobro');
     return;
   }
+  if (excedente > 0 && saldoAplicado > 0) {
+    showToast('⚠ Estás usando saldo a favor y además sobra dinero. Reduce el monto de "Saldo a favor".');
+    return;
+  }
+
+  let saldoFavorAntes = 0;
+  if (saldoAplicado > 0 || excedente > 0) {
+    // Validar contra el saldo REAL en la base (otra computadora pudo usarlo)
+    // y que la tabla exista ANTES de guardar el cobro, para no dejar un
+    // cobro guardado sin su movimiento de saldo a favor.
+    const { data: movsSF, error: errSF } = await db.from('saldos_favor').select('tipo, monto').eq('paciente_id', pacienteId).eq('eliminado', false);
+    if (errSF) { showToast('❌ No se pudo consultar el saldo a favor: ' + errSF.message); return; }
+    saldoFavorAntes = Math.max(0, calcularSaldoFavor(movsSF));
+    if (saldoAplicado > saldoFavorAntes + 0.5) {
+      showToast(`⚠ El saldo a favor disponible es $${saldoFavorAntes.toLocaleString()}; no alcanza para aplicar $${saldoAplicado.toLocaleString()}`);
+      return;
+    }
+  }
+  if (excedente > 0 && !confirm(`El paciente entregó $${montoPagado.toLocaleString()} y el total es $${total.toLocaleString()}.\n\n¿Registrar los $${excedente.toLocaleString()} restantes como SALDO A FAVOR del paciente?`)) {
+    return;
+  }
+
+  // El excedente se descuenta de los últimos métodos capturados (los que no
+  // son saldo a favor): el cobro guarda solo lo que cubre el total y lo que
+  // sobra se registra como depósito de saldo a favor con su método real.
+  const detalleCobro = metodoDetalle.map(m => ({ ...m }));
+  const depositosExcedente = [];
+  let porRepartir = excedente;
+  for (let i = detalleCobro.length - 1; i >= 0 && porRepartir > 0.005; i--) {
+    if (detalleCobro[i].metodo === 'saldo_favor') continue;
+    const quita = Math.min(detalleCobro[i].monto, porRepartir);
+    detalleCobro[i].monto = redondear2(detalleCobro[i].monto - quita);
+    porRepartir = redondear2(porRepartir - quita);
+    depositosExcedente.push({ metodo: detalleCobro[i].metodo, monto: redondear2(quita) });
+  }
+  const detalleCobroFinal = detalleCobro.filter(m => m.monto > 0.005);
+  const metodoPago = detalleCobroFinal.length === 1
+    ? detalleCobroFinal[0].metodo
+    : detalleCobroFinal.map(m => `${m.metodo}:${m.monto}`).join('|');
+  const saldoFavorDespues = redondear2(saldoFavorAntes - saldoAplicado + excedente);
 
   // Desglose línea por línea (cada tratamiento/medicamento/suplemento por
   // separado, con su nombre, cantidad y monto individual) para poder
@@ -356,6 +511,27 @@ async function registrarCobro() {
     await db.from('abonos').insert(abonosIniciales);
   }
 
+  // Movimientos de saldo a favor ligados a ESTE cobro (pago_id): la
+  // aplicación del saldo usado y/o el depósito del excedente.
+  const movimientosSF = [];
+  if (saldoAplicado > 0) {
+    movimientosSF.push({ tipo: 'aplicacion', monto: saldoAplicado, metodo_pago: null, referencia: `Aplicado al cobro ${folio}` });
+  }
+  depositosExcedente.forEach(d => {
+    movimientosSF.push({ tipo: 'deposito', monto: d.monto, metodo_pago: d.metodo, referencia: `Excedente del cobro ${folio}` });
+  });
+  if (movimientosSF.length > 0) {
+    const usuarioSF = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+    const { error: errMov } = await db.from('saldos_favor').insert(movimientosSF.map(m => ({
+      ...m,
+      paciente_id:    pacienteId,
+      pago_id:        pagoInsertado?.id || null,
+      fecha:          fecha,
+      registrado_por: usuarioSF.usuario || 'admin',
+    })));
+    if (errMov) showToast('⚠ El cobro se guardó, pero NO el saldo a favor: ' + errMov.message);
+  }
+
   // Descontar stock de cada medicamento y suplemento/proteína
   for (const s of [...medicItems, ...suplItems]) {
     if (s.id && s.qty > 0) {
@@ -373,17 +549,27 @@ async function registrarCobro() {
   const selPac    = document.getElementById('pago-paciente');
   const nombrePac = selPac.options[selPac.selectedIndex]?.text || '—';
   const detalles  = detalleItems;
-  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
+  const metodoLabel = METODO_PAGO_LABEL;
 
   // Fila de pago: si es a crédito, mostrar Pagado + Saldo pendiente (para
   // que la nota sea congruente con el adeudo real que queda registrado);
   // si es contado, el método de pago ya cubre el total.
-  const filaPagoNota = esCredito
+  let filaPagoNota = esCredito
     ? `
       <div class="nota-row" style="font-size:12px"><span>Pagado</span><span>${metodoDetalle.length > 0 ? metodoDetalle.map(m => `${metodoLabel[m.metodo] || m.metodo} $${m.monto.toLocaleString()}`).join(' + ') : '$0'}</span></div>
       <div class="nota-row" style="font-size:13px;color:#e74c3c"><span><strong>Saldo pendiente (a crédito)</strong></span><span><strong>$${saldoPendiente.toLocaleString()}</strong></span></div>`
     : `
-      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoPago.includes('|') ? metodoPago.split('|').map(m => { const [met,mon] = m.split(':'); return `${met} $${parseFloat(mon).toLocaleString()}`; }).join(' + ') : (metodoLabel[metodoPago] || metodoPago)}</span></div>`;
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${formatearMetodoPagoNota(metodoPago)}</span></div>`;
+
+  if (excedente > 0) {
+    filaPagoNota += `
+      <div class="nota-row" style="font-size:12px"><span>Recibido</span><span>${metodoDetalle.map(m => `${metodoLabel[m.metodo] || m.metodo} $${m.monto.toLocaleString()}`).join(' + ')}</span></div>
+      <div class="nota-row" style="font-size:12px;color:#27AE60"><span>Queda como saldo a favor</span><span>$${excedente.toLocaleString()}</span></div>`;
+  }
+  if (saldoAplicado > 0 || excedente > 0) {
+    filaPagoNota += `
+      <div class="nota-row" style="font-size:13px;color:#27AE60"><span><strong>Saldo a favor disponible</strong></span><span><strong>$${saldoFavorDespues.toLocaleString()}</strong></span></div>`;
+  }
 
   document.getElementById('nota-imprimible').innerHTML = `
     <div class="nota-preview">
@@ -539,6 +725,8 @@ function renderCobros(data, abonosPorPago = {}) {
 // ── LIMPIAR FORM ──
 function limpiarFormPago() {
   document.getElementById('pago-paciente').value = '';
+  saldoFavorPagoDisponible = 0;
+  pintarAvisoSaldoFavorPago();
   const notasEl = document.getElementById('pago-notas');
   if (notasEl) notasEl.value = '';
 
@@ -572,11 +760,8 @@ function limpiarFormPago() {
     const div = document.createElement('div');
     div.style.cssText = 'display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center';
     div.innerHTML = `
-      <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
-        <option value="" selected disabled>Selecciona método...</option>
-        <option value="efectivo">💵 Efectivo</option>
-        <option value="tarjeta">💳 Tarjeta</option>
-        <option value="transferencia">🏦 Transferencia</option>
+      <select class="metodo-sel" onchange="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
+        ${opcionesMetodoPagoHTML('')}
       </select>
       <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">`;
     cont.appendChild(div);
@@ -604,7 +789,7 @@ async function reimprimirCobro(id) {
 
   if (error || !p) { showToast('❌ Error al cargar cobro'); return; }
 
-  const metodoLabel = { efectivo:'Efectivo', tarjeta:'Tarjeta', credito:'Crédito', transferencia:'Transferencia' };
+  const metodoLabel = METODO_PAGO_LABEL;
 
   // Preferir el desglose línea por línea guardado al momento del cobro
   // (nombre + cantidad de cada tratamiento/medicamento/suplemento). Los
@@ -637,7 +822,15 @@ async function reimprimirCobro(id) {
       <div class="nota-row" style="font-size:13px;color:#e74c3c"><span><strong>Saldo pendiente (a crédito)</strong></span><span><strong>$${saldo.toLocaleString()}</strong></span></div>`;
   } else {
     filaPagoNota = `
-      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[p.metodo_pago] || p.metodo_pago}</span></div>`;
+      <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${formatearMetodoPagoNota(p.metodo_pago)}</span></div>`;
+  }
+
+  // Excedente de este cobro que quedó como saldo a favor
+  const { data: depositosSF } = await db.from('saldos_favor').select('monto').eq('pago_id', p.id).eq('tipo', 'deposito').eq('eliminado', false);
+  const excedenteSF = (depositosSF || []).reduce((s, d) => s + parseFloat(d.monto || 0), 0);
+  if (excedenteSF > 0) {
+    filaPagoNota += `
+      <div class="nota-row" style="font-size:12px;color:#27AE60"><span>Quedó como saldo a favor</span><span>$${excedenteSF.toLocaleString()}</span></div>`;
   }
 
   document.getElementById('nota-imprimible').innerHTML = `
@@ -670,11 +863,8 @@ function agregarMetodoPago() {
   const div  = document.createElement('div');
   div.style.cssText = 'display:grid;grid-template-columns:1fr 140px 32px;gap:8px;align-items:center';
   div.innerHTML = `
-    <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
-      <option value="" selected disabled>Selecciona método...</option>
-      <option value="efectivo">💵 Efectivo</option>
-      <option value="tarjeta">💳 Tarjeta</option>
-      <option value="transferencia">🏦 Transferencia</option>
+    <select class="metodo-sel" onchange="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--cream);outline:none">
+      ${opcionesMetodoPagoHTML('')}
     </select>
     <input type="number" class="metodo-monto" placeholder="Monto $" step="0.01" oninput="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(184,147,90,.28);padding:8px 10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--gold);outline:none;width:100%">
     <button type="button" onclick="this.parentElement.remove();recalcMetodos()" style="background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;padding:6px 8px;cursor:pointer;font-size:12px">✕</button>`;
@@ -702,7 +892,9 @@ function recalcMetodos() {
 // "Contado" con un pago incompleto (o "A crédito" con el total ya cubierto).
 //   - Pagado == Total  -> "Contado" (automático)
 //   - Pagado <  Total  -> "A crédito" (automático)
-//   - Pagado >  Total  -> sobrepago: se avisa y se bloquea Registrar Cobro
+//   - Pagado >  Total  -> "Contado" y el excedente queda como saldo a favor
+//                         (se bloquea solo si el sobrepago viene de usar
+//                         saldo a favor, o si se aplica más saldo del que hay)
 function actualizarTipoCobroDisponible(totalCobro, totalPagado) {
   const contadoRadio = document.getElementById('cobro-contado');
   const creditoRadio = document.getElementById('cobro-credito');
@@ -720,12 +912,33 @@ function actualizarTipoCobroDisponible(totalCobro, totalPagado) {
   const sobrepago = diff > 0.5;
   const coincide  = Math.abs(diff) <= 0.5;
 
+  let saldoUsado = 0;
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach(sel => {
+    if (sel.value === 'saldo_favor') saldoUsado += parseFloat(sel.parentElement.querySelector('.metodo-monto')?.value || 0);
+  });
+
+  const bloquear = (texto) => {
+    if (aviso) { aviso.textContent = texto; aviso.style.color = '#e74c3c'; aviso.style.display = ''; }
+    if (btnRegistrar) btnRegistrar.disabled = true;
+  };
+
+  if (saldoUsado > saldoFavorPagoDisponible + 0.5) {
+    bloquear(`⚠ El saldo a favor disponible es $${saldoFavorPagoDisponible.toLocaleString()}. Corrige el monto de "Saldo a favor".`);
+    return;
+  }
+
   if (sobrepago) {
+    if (saldoUsado > 0) {
+      bloquear('⚠ Estás usando saldo a favor y además sobra dinero. Reduce el monto de "Saldo a favor".');
+      return;
+    }
+    contadoRadio.checked = true;
     if (aviso) {
-      aviso.textContent   = '⚠ El monto capturado en Método de pago supera el Total del cobro. Corrige el monto antes de continuar.';
+      aviso.textContent   = `💰 Sobran $${diff.toLocaleString()}: quedarán como SALDO A FAVOR del paciente para su próxima visita.`;
+      aviso.style.color   = '#27AE60';
       aviso.style.display = '';
     }
-    if (btnRegistrar) btnRegistrar.disabled = true;
+    if (btnRegistrar) btnRegistrar.disabled = false;
     return;
   }
 
@@ -779,7 +992,25 @@ async function eliminarCobro(id) {
     return;
   }
 
-  if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación y se recalculará el saldo del paciente si era un cobro en crédito.')) return;
+  // Movimientos de saldo a favor ligados a este cobro (saldo aplicado y/o
+  // excedente depositado). Al eliminar el cobro se eliminan también: el
+  // saldo aplicado regresa al paciente y el excedente se retira. Si ese
+  // excedente ya se usó en otro cobro, el saldo quedaría negativo: se bloquea.
+  const { data: movsSF } = await db.from('saldos_favor').select('tipo, monto, paciente_id').eq('pago_id', id).eq('eliminado', false);
+  let avisoSF = '';
+  if (movsSF && movsSF.length > 0) {
+    const efecto      = calcularSaldoFavor(movsSF);
+    const saldoActual = await obtenerSaldoFavor(movsSF[0].paciente_id);
+    if (saldoActual - efecto < -0.5) {
+      showToast('⚠ El saldo a favor que generó este cobro ya se usó en otro cobro. Elimina primero ese otro cobro.');
+      return;
+    }
+    avisoSF = efecto > 0
+      ? `\n\nTambién se retirarán $${efecto.toLocaleString()} del saldo a favor del paciente.`
+      : `\n\nSe regresarán $${Math.abs(efecto).toLocaleString()} al saldo a favor del paciente.`;
+  }
+
+  if (!confirm('¿Eliminar este cobro? Quedará un registro de la eliminación y se recalculará el saldo del paciente si era un cobro en crédito.' + avisoSF)) return;
 
   if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
     const autorizado = await pedirAutorizacionAdmin('Eliminar un cobro requiere autorización de un Administrador.');
@@ -794,6 +1025,14 @@ async function eliminarCobro(id) {
   }).eq('id', id);
 
   if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  if (movsSF && movsSF.length > 0) {
+    await db.from('saldos_favor').update({
+      eliminado:     true,
+      eliminado_por: usuario.usuario || 'admin',
+      eliminado_at:  new Date().toISOString()
+    }).eq('pago_id', id).eq('eliminado', false);
+  }
 
   showToast('✓ Cobro eliminado — contabilidad recalculada');
 

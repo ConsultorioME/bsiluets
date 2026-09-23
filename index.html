@@ -303,6 +303,9 @@
               <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(201,168,108,.15);padding-top:10px;font-weight:600">
                 <span style="color:var(--cream)">Total</span><span id="perfil-adeudo-total">—</span>
               </div>
+              <div style="display:flex;justify-content:space-between;margin-top:10px;color:var(--cream);opacity:.8">
+                <span>💰 Saldo a favor</span><span id="perfil-saldo-favor" style="font-weight:600">—</span>
+              </div>
               <button class="tb-btn" style="width:100%;margin-top:12px" onclick="generarNotaAdeudo()">🧾 Generar Adeudo Total</button>
             </div>
           </div>
@@ -389,6 +392,7 @@
                     <input type="date" id="pago-fecha" style="width:100%;background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:9px 13px;font-family:'Jost',sans-serif;font-size:13px;color:var(--cream);outline:none">
                   </div>
                 </div>
+                <div id="pago-saldo-favor-aviso" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(39,174,96,.08);border:1px solid rgba(39,174,96,.3);color:#27AE60;font-size:12px"></div>
               </div>
               <div class="accion-servicio">
                 <div class="as-header">
@@ -436,7 +440,7 @@
               <div class="card-title" style="font-size:10px;margin-bottom:10px">Método de pago</div>
               <div style="display:flex;flex-direction:column;gap:8px" id="metodos-pago-container">
                 <div style="display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center">
-                  <select class="metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+                  <select class="metodo-sel" onchange="recalcMetodos()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
                     <option value="" selected disabled>Selecciona método...</option>
                     <option value="efectivo">💵 Efectivo</option>
                     <option value="tarjeta">💳 Tarjeta</option>
@@ -988,6 +992,21 @@
             <tbody id="tabla-creditos-body"></tbody>
           </table>
         </div>
+        <div class="card" style="margin-top:18px">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>💰 Saldos a favor</span>
+            <button class="btn-primary" style="padding:6px 14px;font-size:10px" onclick="abrirSaldoFavor()">+ Registrar anticipo</button>
+          </div>
+          <div style="display:flex;gap:24px;margin-bottom:14px;font-size:12px;color:var(--cream);opacity:.7">
+            <span>Pacientes con saldo: <strong id="kpi-sf-clientes" style="color:var(--gold)">—</strong></span>
+            <span>Total a favor de pacientes: <strong id="kpi-sf-total" style="color:#27AE60">—</strong></span>
+          </div>
+          <input type="text" id="busca-saldo-favor" class="search-box" style="width:100%;margin-bottom:14px" placeholder="🔍  Buscar paciente..." oninput="buscarSaldoFavor(this.value)">
+          <table>
+            <tr><th>Paciente</th><th>Saldo a favor</th><th>Último movimiento</th><th></th></tr>
+            <tbody id="tabla-saldos-favor-body"></tbody>
+          </table>
+        </div>
       </div>
 
     </div>
@@ -1268,6 +1287,49 @@
   </div>
 </div>
 
+<!-- MODAL: SALDO A FAVOR (movimientos, anticipo, devolución) -->
+<div class="modal-overlay" id="modal-saldo-favor">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('saldo-favor')">×</button>
+    <div class="modal-title">💰 Saldo a favor</div>
+    <div class="fg"><label>Paciente</label><select id="sf-paciente" onchange="cambiarPacienteSaldoFavor()"></select></div>
+    <div style="background:rgba(39,174,96,.06);border:1px solid rgba(39,174,96,.2);padding:14px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--cream);opacity:.8"><span>Saldo a favor disponible</span><span id="sf-saldo-actual" style="font-weight:600">—</span></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Movimiento</label>
+        <select id="sf-tipo">
+          <option value="deposito">Anticipo (el paciente deja dinero)</option>
+          <option value="devolucion">Devolución (se le regresa dinero)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Monto</label><input type="number" id="sf-monto" placeholder="0.00" step="0.01"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label>Método</label>
+        <select id="sf-metodo">
+          <option value="" selected disabled>Selecciona método...</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+        </select>
+      </div>
+      <div class="fg"><label>Fecha</label><input type="date" id="sf-fecha"></div>
+    </div>
+    <div class="fg"><label>Referencia (opcional)</label><input type="text" id="sf-referencia" placeholder="Ej. Dejó para su próxima sesión..."></div>
+
+    <div style="margin-top:16px">
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);opacity:.55;margin-bottom:10px">Movimientos</div>
+      <div id="sf-historial" style="max-height:220px;overflow-y:auto"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('saldo-favor')">Cerrar</button>
+      <button class="btn-primary" onclick="guardarMovimientoSaldoFavor()">Registrar movimiento</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: CONFIRMAR ADMIN (autorización para acciones sensibles de Recepcionista) -->
 <div class="modal-overlay" id="modal-confirmar-admin">
   <div class="modal" style="max-width:380px">
@@ -1409,6 +1471,7 @@
 <script src="js/pagos.js"></script>
 <script src="js/paquetes.js"></script>
 <script src="js/creditos.js"></script>
+<script src="js/saldos_favor.js"></script>
 <script src="js/caja.js"></script>
 <script src="js/gastos.js"></script>
 <script src="js/reportes.js"></script>
