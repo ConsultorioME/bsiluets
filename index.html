@@ -228,6 +228,9 @@
           <button class="agenda-tab" onclick="selAgenda('Depilación',this)">🪒 Depilación</button>
         </div>
 
+        <!-- Confirmaciones por WhatsApp: citas del siguiente día hábil (todas las agendas) -->
+        <div id="panel-confirmaciones" class="conf-panel" style="display:none"></div>
+
         <!-- Vista de escritorio: cuadrícula semanal -->
         <div class="agenda-desktop">
           <div class="agenda-week-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
@@ -1081,6 +1084,7 @@
       </div>
     </div>
     <div class="form-row full"><div class="fg"><label>Notas</label><textarea id="cita-notas" placeholder="Indicaciones especiales..."></textarea></div></div>
+    <div id="cita-whatsapp-box" class="conf-modal-box" style="display:none"></div>
     <div class="modal-actions">
       <button class="btn-outline" id="btn-eliminar-cita" style="display:none;border-color:#e74c3c;color:#e74c3c;margin-right:auto" onclick="eliminarCitaDesdeModal()">🗑 Eliminar Cita</button>
       <button class="btn-outline" onclick="closeModal('nueva-cita');limpiarFormCita()">Cancelar</button>

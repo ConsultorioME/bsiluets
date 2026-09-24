@@ -25,6 +25,11 @@ let citaEstadoAlAbrir        = null;
 let citaCompletadaPacienteId = null;
 let citaCompletadaId         = null; // id de la cita — se usa para vincular (cita_id) la visita/cobro que se registre desde el aviso, y así poder cuadrar Agenda con Pagos/Paquetes & Visitas.
 
+// Fecha/hora originales de la cita en edición: si cambian, el recordatorio
+// de WhatsApp ya enviado deja de valer y la cita vuelve a "Sin enviar".
+let citaFechaAlAbrir = null;
+let citaHoraAlAbrir  = null;
+
 // ── PERMISOS: SOLO ADMIN PUEDE CANCELAR / ELIMINAR CITAS ──
 // Evita que una cita "Completada" (con tratamiento ya aplicado) se cambie a
 // "Cancelada" o se borre para tapar un cobro que no se registró (robo hormiga).
@@ -259,6 +264,7 @@ async function cargarCitasSemana() {
 
   renderSemanaGrid(citasPorDia, bloqueosPorDia);
   renderVistaMovil(citasPorDia, bloqueosPorDia);
+  cargarPanelConfirmaciones();
 
   const resumen = document.getElementById('resumen-semana');
   if (resumen) {
@@ -561,6 +567,24 @@ async function guardarCita() {
     return;
   }
 
+  // Rastro de la confirmación: quién la confirmó y cuándo. Si la recepción
+  // la marca a mano (p. ej. confirmó por llamada) queda como 'recepcion';
+  // cuando el paciente confirma desde el enlace lo registra la función SQL.
+  if (datos.estado === 'confirmada' && citaEstadoAlAbrir !== 'confirmada') {
+    datos.confirmada_at  = new Date().toISOString();
+    datos.confirmada_por = 'recepcion';
+  } else if (datos.estado !== 'confirmada' && citaEstadoAlAbrir === 'confirmada') {
+    datos.confirmada_at  = null;
+    datos.confirmada_por = null;
+  }
+  // Si se movió la fecha u hora, el recordatorio enviado ya no aplica.
+  if (id && (datos.fecha !== citaFechaAlAbrir || datos.hora !== citaHoraAlAbrir)) {
+    datos.confirmacion_enviada_at = null;
+    datos.confirmacion_envios     = 0;
+    datos.respuesta_paciente      = null;
+    datos.respuesta_at            = null;
+  }
+
   let error, citaId = id;
   if (id) {
     ({ error } = await db.from('agenda').update(datos).eq('id', id));
@@ -600,7 +624,9 @@ async function guardarCita() {
 
 // ── EDITAR CITA ──
 async function editarCita(id) {
-  const { data: c, error } = await db.from('agenda').select('*').eq('id', id).single();
+  const { data: c, error } = await db.from('agenda')
+    .select('*, pacientes(nombre,apellidos,telefono), tratamientos(nombre)')
+    .eq('id', id).single();
   if (error || !c) { showToast('❌ Error al cargar cita'); return; }
 
   await cargarSelectsPacientesTratamientos();
@@ -614,7 +640,10 @@ async function editarCita(id) {
   document.getElementById('cita-estado').value      = c.estado || 'pendiente';
   document.getElementById('cita-notas').value       = c.notas || '';
   citaEstadoAlAbrir = c.estado || 'pendiente';
+  citaFechaAlAbrir  = c.fecha;
+  citaHoraAlAbrir   = c.hora?.substring(0, 5) || '';
   aplicarPermisosEstadoCita();
+  renderBoxWhatsappCita(c);
 
   document.querySelector('#modal-nueva-cita .modal-title').textContent = 'Editar Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');
@@ -700,7 +729,11 @@ function limpiarFormCita() {
   document.getElementById('cita-estado').value   = 'pendiente';
   document.getElementById('cita-duracion').value = '60';
   citaEstadoAlAbrir = null;
+  citaFechaAlAbrir  = null;
+  citaHoraAlAbrir   = null;
   aplicarPermisosEstadoCita();
+  const boxWa = document.getElementById('cita-whatsapp-box');
+  if (boxWa) { boxWa.style.display = 'none'; boxWa.innerHTML = ''; }
   const titulo = document.querySelector('#modal-nueva-cita .modal-title');
   if (titulo) titulo.textContent = 'Nueva Cita';
   const btnEliminar = document.getElementById('btn-eliminar-cita');
@@ -800,4 +833,252 @@ async function eliminarBloqueo(id) {
   showToast('✓ Bloqueo eliminado');
   cargarFechasBloqueadasConfig();
   await cargarCitasSemana();
+}
+
+// ─────────────────────────────────────────
+//  CONFIRMACIÓN DE CITAS POR WHATSAPP (Fase 1)
+//  La recepción envía el recordatorio con un clic (se abre WhatsApp con el
+//  mensaje ya escrito). El mensaje lleva un enlace a confirmar.html, donde
+//  el PACIENTE confirma y la cita pasa sola a "Confirmada" — nadie tiene
+//  que acordarse de marcarla. Requiere sql/confirmacion_whatsapp.sql.
+// ─────────────────────────────────────────
+
+let _citasConfCache     = {};    // id → cita (panel y modal), para armar el mensaje
+let _panelConfColapsado = false;
+
+// Días que cubre el panel: desde mañana hasta el siguiente día hábil entre
+// semana, incluyendo sábados/domingos abiertos que haya en medio. Así el
+// viernes se ven las del sábado (si abren) Y las del lunes, y antes de un
+// festivo (Fechas bloqueadas) se ven las del día en que se reabre.
+function fechasParaConfirmar(bloqueadas) {
+  const fechas = [];
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  for (let i = 0; i < 14; i++) {
+    d.setDate(d.getDate() + 1);
+    const f = fmtFecha(d);
+    const abierto = obtenerRangosParaFecha(f).length > 0 && !bloqueadas.has(f);
+    if (!abierto) continue;
+    fechas.push(f);
+    const dow = d.getDay();
+    if (dow >= 1 && dow <= 5) break;
+  }
+  return fechas;
+}
+
+// Teléfono → formato internacional para wa.me (México: 52 + 10 dígitos).
+function normalizarTelWhatsapp(tel) {
+  const dig = String(tel || '').replace(/\D/g, '');
+  if (dig.length === 10) return '52' + dig;
+  if (dig.length === 12 && dig.startsWith('52')) return dig;
+  if (dig.length === 13 && dig.startsWith('521')) return '52' + dig.slice(3);
+  return null;
+}
+
+function linkConfirmacion(c) {
+  return new URL('confirmar.html?c=' + c.confirmacion_token, window.location.href).href;
+}
+
+function fechaLargaCita(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function horaCitaTexto(hora) {
+  const { h, ampm } = formatHora12(hora);
+  return `${h} ${ampm === 'AM' ? 'a.m.' : 'p.m.'}`;
+}
+
+function mensajeConfirmacion(c) {
+  const nombre = (c.pacientes?.nombre || '').trim().split(/\s+/)[0] || '';
+  const trat   = c.tratamientos?.nombre ? `\n💆 ${c.tratamientos.nombre}` : '';
+  return `Hola ${nombre} 👋\n` +
+    `Te recordamos tu cita en *B·Siluets*:\n\n` +
+    `📅 ${fechaLargaCita(c.fecha)}\n` +
+    `🕐 ${horaCitaTexto(c.hora)}${trat}\n\n` +
+    `Por favor confirma tu asistencia aquí:\n${linkConfirmacion(c)}\n\n` +
+    `Si necesitas cambiar tu cita, en el mismo enlace puedes avisarnos. ¡Te esperamos!`;
+}
+
+function horaCortaDeTimestamp(ts) {
+  const d = new Date(ts);
+  const hora = d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
+  return fmtFecha(d) === fechaHoyISO() ? hora : `${d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} ${hora}`;
+}
+
+// Situación del recordatorio de una cita → { clave, html, accion }
+function estadoConfirmacion(c) {
+  const tel = normalizarTelWhatsapp(c.pacientes?.telefono);
+  if (c.estado === 'confirmada') {
+    const quien = c.confirmada_por === 'paciente' ? 'por el paciente' : (c.confirmada_por === 'recepcion' ? 'por recepción' : '');
+    return { clave: 'confirmada', html: `🟢 Confirmada${quien ? `<small>${quien}</small>` : ''}`, accion: '' };
+  }
+  if (!c.paciente_id) {
+    return { clave: 'sin_tel', html: '⚠️ Sin paciente asignado', accion: '' };
+  }
+  if (c.respuesta_paciente === 'reagendar') {
+    return {
+      clave: 'reagendar',
+      html: `🟠 Pidió reagendar<small>Contáctalo y mueve la cita</small>`,
+      accion: tel ? `<button class="conf-btn sec" onclick="event.stopPropagation();abrirChatWhatsapp('${c.id}')">📲 Escribirle</button>` : '',
+    };
+  }
+  if (!tel) {
+    return { clave: 'sin_tel', html: `⚠️ ${c.pacientes?.telefono ? 'Teléfono no válido' : 'Sin teléfono'}<small>Corrígelo en Pacientes</small>`, accion: '' };
+  }
+  if (c.confirmacion_enviada_at) {
+    const veces = (c.confirmacion_envios || 0) > 1 ? ` (${c.confirmacion_envios} veces)` : '';
+    return {
+      clave: 'enviado',
+      html: `🟡 Mensaje enviado ${horaCortaDeTimestamp(c.confirmacion_enviada_at)}${veces}<small>Sin respuesta todavía</small>`,
+      accion: `<button class="conf-btn sec" onclick="event.stopPropagation();enviarConfirmacionWhatsapp('${c.id}')">Reenviar 📲</button>`,
+    };
+  }
+  return {
+    clave: 'sin_enviar',
+    html: '🔴 Sin enviar',
+    accion: `<button class="conf-btn" onclick="event.stopPropagation();enviarConfirmacionWhatsapp('${c.id}')">Enviar 📲</button>`,
+  };
+}
+
+// ── PANEL "CONFIRMACIONES" ARRIBA DE LA AGENDA (todas las agendas) ──
+async function cargarPanelConfirmaciones() {
+  const panel = document.getElementById('panel-confirmaciones');
+  if (!panel) return;
+  if (esRolSoloLectura()) { panel.style.display = 'none'; return; }
+
+  const ini = new Date(); ini.setDate(ini.getDate() + 1);
+  const fin = new Date(); fin.setDate(fin.getDate() + 15);
+  const { data: bloq } = await db.from('fechas_bloqueadas').select('fecha')
+    .gte('fecha', fmtFecha(ini)).lte('fecha', fmtFecha(fin));
+  const fechas = fechasParaConfirmar(new Set((bloq || []).map(b => b.fecha)));
+  if (!fechas.length) { panel.style.display = 'none'; return; }
+
+  const { data: citas, error } = await db.from('agenda')
+    .select('id, fecha, hora, estado, agenda_tipo, paciente_id, confirmacion_token, confirmacion_enviada_at, confirmacion_envios, confirmada_por, respuesta_paciente, pacientes(nombre,apellidos,telefono), tratamientos(nombre)')
+    .in('fecha', fechas)
+    .in('estado', ['pendiente', 'confirmada'])
+    .order('fecha').order('hora');
+
+  // Si aún no se ejecutó el SQL de confirmaciones, el panel simplemente no aparece.
+  if (error || !citas || !citas.length) { panel.style.display = 'none'; return; }
+
+  citas.forEach(c => { _citasConfCache[c.id] = c; });
+  const estados  = citas.map(c => ({ c, e: estadoConfirmacion(c) }));
+  const contar   = clave => estados.filter(x => x.e.clave === clave).length;
+  const nConf    = contar('confirmada');
+  const nSinEnv  = contar('sin_enviar');
+  const nEnviado = contar('enviado');
+  const nReag    = contar('reagendar');
+  const nSinTel  = contar('sin_tel');
+
+  const diasTxt = fechas.map(f =>
+    new Date(f + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' })
+  ).join(' y ');
+  const titulo = fechas.length === 1 && fechas[0] === fmtFecha(ini)
+    ? `📲 Confirmaciones para mañana (${diasTxt})`
+    : `📲 Confirmaciones para ${diasTxt}`;
+
+  const resumen = [
+    `<span style="color:#27AE60">${nConf} de ${citas.length} confirmada${citas.length !== 1 ? 's' : ''}</span>`,
+    nSinEnv  ? `<span style="color:#e74c3c">🔴 ${nSinEnv} sin enviar</span>` : '',
+    nEnviado ? `<span style="color:#B7950B">🟡 ${nEnviado} sin respuesta</span>` : '',
+    nReag    ? `<span style="color:#E67E22">🟠 ${nReag} por reagendar</span>` : '',
+    nSinTel  ? `<span style="color:#E67E22">⚠️ ${nSinTel} sin teléfono</span>` : '',
+  ].filter(Boolean).join('');
+
+  let cuerpo;
+  if (nConf === citas.length) {
+    cuerpo = `<div class="conf-ok">✓ Todas las citas están confirmadas.</div>`;
+  } else {
+    let diaPrevio = null;
+    cuerpo = estados.map(({ c, e }) => {
+      let encabezado = '';
+      if (fechas.length > 1 && c.fecha !== diaPrevio) {
+        diaPrevio  = c.fecha;
+        encabezado = `<div class="conf-dia">${fechaLargaCita(c.fecha)}</div>`;
+      }
+      const { h, ampm } = formatHora12(c.hora);
+      const nombre = c.pacientes ? `${c.pacientes.nombre} ${c.pacientes.apellidos || ''}` : 'Sin paciente';
+      return `${encabezado}
+        <div class="conf-row">
+          <div class="conf-hora">${h} <small style="font-weight:400;opacity:.6">${ampm}</small></div>
+          <div class="conf-pac" onclick="editarCita('${c.id}')" title="Abrir la cita">${nombre}</div>
+          <div class="conf-trat">${c.tratamientos?.nombre || ''}<small>${c.agenda_tipo || ''}</small></div>
+          <div class="conf-est">${e.html}</div>
+          <div class="conf-accion">${e.accion}</div>
+        </div>`;
+    }).join('');
+  }
+
+  panel.className = 'conf-panel' + (_panelConfColapsado ? ' collapsed' : '');
+  panel.innerHTML = `
+    <div class="conf-head" onclick="togglePanelConfirmaciones()">
+      <span class="conf-head-title">${titulo}</span>
+      <span class="conf-head-res">${resumen}<span style="opacity:.4">${_panelConfColapsado ? '▾' : '▴'}</span></span>
+    </div>
+    <div class="conf-body">${cuerpo}</div>`;
+  panel.style.display = '';
+}
+
+function togglePanelConfirmaciones() {
+  _panelConfColapsado = !_panelConfColapsado;
+  cargarPanelConfirmaciones();
+}
+
+// ── ENVIAR EL RECORDATORIO ──
+async function enviarConfirmacionWhatsapp(id) {
+  const c = _citasConfCache[id];
+  if (!c) return;
+  const tel = normalizarTelWhatsapp(c.pacientes?.telefono);
+  if (!tel) { showToast('⚠ El paciente no tiene un teléfono válido de 10 dígitos'); return; }
+  if (!c.confirmacion_token) { showToast('⚠ Falta ejecutar el SQL de confirmaciones en Supabase'); return; }
+
+  // Se abre ANTES de cualquier await para que el navegador no lo bloquee.
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensajeConfirmacion(c))}`, '_blank');
+
+  if (['localhost', '127.0.0.1', ''].includes(window.location.hostname)) {
+    showToast('⚠ Estás en modo local: el enlace del mensaje no abrirá en el celular del paciente');
+  }
+
+  const cambios = {
+    confirmacion_enviada_at: new Date().toISOString(),
+    confirmacion_envios:     (c.confirmacion_envios || 0) + 1,
+  };
+  const { error } = await db.from('agenda').update(cambios).eq('id', id);
+  if (error) { showToast('❌ No se pudo registrar el envío: ' + error.message); return; }
+  Object.assign(c, cambios);
+
+  if (document.getElementById('cita-id')?.value === id) renderBoxWhatsappCita(c);
+  cargarPanelConfirmaciones();
+}
+
+// Abre el chat con el paciente sin mensaje prellenado (p. ej. pidió reagendar).
+function abrirChatWhatsapp(id) {
+  const tel = normalizarTelWhatsapp(_citasConfCache[id]?.pacientes?.telefono);
+  if (!tel) { showToast('⚠ El paciente no tiene un teléfono válido'); return; }
+  window.open(`https://wa.me/${tel}`, '_blank');
+}
+
+// ── RECUADRO DE WHATSAPP DENTRO DEL MODAL "EDITAR CITA" ──
+function renderBoxWhatsappCita(c) {
+  const box = document.getElementById('cita-whatsapp-box');
+  if (!box) return;
+  const vigente = ['pendiente', 'confirmada'].includes(c.estado) && c.fecha >= fechaHoyISO();
+  if (!vigente || !c.paciente_id || !c.confirmacion_token) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  _citasConfCache[c.id] = c;
+  const e = estadoConfirmacion(c);
+  let accion = e.accion;
+  if (e.clave === 'confirmada' && normalizarTelWhatsapp(c.pacientes?.telefono)) {
+    accion = `<button class="conf-btn sec" onclick="enviarConfirmacionWhatsapp('${c.id}')">Enviar recordatorio 📲</button>`;
+  }
+  box.innerHTML = `
+    <div class="conf-est"><strong style="font-weight:500">Confirmación por WhatsApp:</strong> ${e.html}
+      <small>El mensaje usa los datos guardados de la cita.</small></div>
+    <div>${accion}</div>`;
+  box.style.display = 'flex';
 }

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Confirma tu cita — B·Siluets</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<meta name="theme-color" content="#B8935A">
+<!--
+  B·Siluets — Confirmación de cita (página pública, sin iniciar sesión)
+  El paciente llega aquí desde el enlace del mensaje de WhatsApp
+  (confirmar.html?c=<token>). Solo puede ver y responder SU cita, a través
+  de las funciones cita_confirmacion_ver / cita_confirmacion_responder
+  (sql/confirmacion_whatsapp.sql).
+  Software SIE © 2025
+-->
+<style>
+  :root{--gold:#B8935A;--gold-dark:#8B6914;--bg:#FAFAF8;--card:#FFFFFF;--ink:#1A1A1A;--muted:#6b6b6b;--line:rgba(184,147,90,.25);--ok:#1E8E4E;--warn:#C0392B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Jost',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+  .wrap{width:100%;max-width:420px;text-align:center}
+  .logo{max-width:170px;width:60%;height:auto;margin:0 auto 22px;display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 22px;box-shadow:0 8px 30px rgba(0,0,0,.05)}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:28px;line-height:1.2;margin-bottom:6px}
+  .sub{font-size:14px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+  .detalle{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:16px 4px;margin-bottom:24px;text-align:left;display:grid;gap:10px;font-size:15px}
+  .detalle div{display:flex;gap:12px;align-items:baseline}
+  .detalle span:first-child{width:22px;text-align:center;flex:0 0 auto}
+  .detalle strong{font-weight:500;text-transform:capitalize}
+  .btn{display:block;width:100%;border:none;border-radius:10px;padding:16px;font-family:'Jost',sans-serif;font-size:16px;font-weight:500;cursor:pointer;letter-spacing:.02em;transition:opacity .2s}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn-ok{background:var(--gold);color:#fff;margin-bottom:12px}
+  .btn-sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .icono{font-size:46px;margin-bottom:10px}
+  .ok{color:var(--ok)}
+  .nota{font-size:12px;color:var(--muted);margin-top:22px}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="assets/img/logo-bsiluets.png" alt="B·Siluets">
+  <div class="card" id="contenido">
+    <p class="sub" style="margin:0">Cargando tu cita...</p>
+  </div>
+  <p class="nota">B·Siluets · Consultorio Médico Estético</p>
+</div>
+
+<script src="js/supabase.min.js"></script>
+<script>
+  // Mismo proyecto y llave pública que js/supabase.js.
+  const SUPABASE_URL = 'https://gkgquismlqenimxejctr.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrZ3F1aXNtbHFlbmlteGVqY3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1ODM1NjAsImV4cCI6MjA5NjE1OTU2MH0.IHMI92Db0_JkMAKUwUZqQn0TTOGUPyvkU88k2ipE4HQ';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const token = new URLSearchParams(location.search).get('c');
+  const el = document.getElementById('contenido');
+  let cita = null;
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function fechaLarga(f) {
+    return new Date(f + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function hora12(hhmm) {
+    const [h, m] = (hhmm || '00:00').split(':').map(Number);
+    return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}`;
+  }
+
+  function detalleHTML() {
+    return `<div class="detalle">
+      <div><span>📅</span><strong>${esc(fechaLarga(cita.fecha))}</strong></div>
+      <div><span>🕐</span><strong style="text-transform:none">${esc(hora12(cita.hora))}</strong></div>
+      ${cita.tratamiento ? `<div><span>💆</span><strong style="text-transform:none">${esc(cita.tratamiento)}</strong></div>` : ''}
+    </div>`;
+  }
+
+  function mensaje(icono, titulo, texto, conDetalle) {
+    el.innerHTML = `<div class="icono">${icono}</div><h1>${titulo}</h1><p class="sub">${texto}</p>${conDetalle ? detalleHTML() : ''}`;
+  }
+
+  function pantallaConfirmada() {
+    mensaje('<span class="ok">✓</span>', '¡Cita confirmada!', `Gracias${cita.paciente ? ', ' + esc(cita.paciente.split(' ')[0]) : ''}. Te esperamos:`, true);
+  }
+
+  function pantallaReagendar() {
+    mensaje('📞', 'Recibimos tu solicitud', 'En breve nos comunicaremos contigo para buscar una nueva fecha para tu cita.', false);
+  }
+
+  function pantallaPregunta() {
+    const nombre = cita.paciente ? esc(cita.paciente.split(' ')[0]) : '';
+    el.innerHTML = `
+      <h1>Hola${nombre ? ' ' + nombre : ''}</h1>
+      <p class="sub">Por favor confirma tu asistencia a tu próxima cita:</p>
+      ${detalleHTML()}
+      <button class="btn btn-ok" id="btn-conf" onclick="responder('confirmada')">✓ Confirmo mi asistencia</button>
+      <button class="btn btn-sec" id="btn-reag" onclick="pedirReagendar()">Necesito cambiar mi cita</button>`;
+  }
+
+  function pedirReagendar() {
+    el.innerHTML = `
+      <h1>¿Cambiar tu cita?</h1>
+      <p class="sub">Le avisaremos a recepción para que se comunique contigo y te ofrezca otra fecha.</p>
+      ${detalleHTML()}
+      <button class="btn btn-ok" onclick="responder('reagendar')">Sí, necesito cambiarla</button>
+      <button class="btn btn-sec" onclick="pantallaPregunta()">Regresar</button>`;
+  }
+
+  async function responder(respuesta) {
+    el.querySelectorAll('button').forEach(b => b.disabled = true);
+    const { data, error } = await db.rpc('cita_confirmacion_responder', { p_token: token, p_respuesta: respuesta });
+    if (error || !data) {
+      mensaje('⚠️', 'No pudimos registrar tu respuesta', 'Revisa tu conexión a internet e inténtalo de nuevo, o respóndenos por WhatsApp.', false);
+      return;
+    }
+    if (!data.ok) { pantallaNoDisponible(data.estado); return; }
+    respuesta === 'confirmada' ? pantallaConfirmada() : pantallaReagendar();
+  }
+
+  function pantallaNoDisponible(estado) {
+    if (estado === 'cancelada') {
+      mensaje('ℹ️', 'Esta cita fue cancelada', 'Si deseas agendar una nueva cita, escríbenos por WhatsApp.', false);
+    } else {
+      mensaje('ℹ️', 'Este enlace ya no está vigente', 'La cita ya pasó o ya fue atendida. Si tienes dudas, escríbenos por WhatsApp.', false);
+    }
+  }
+
+  async function iniciar() {
+    if (!token || !/^[0-9a-f-]{36}$/i.test(token)) {
+      mensaje('⚠️', 'Enlace no válido', 'Verifica que abriste el enlace completo del mensaje de WhatsApp.', false);
+      return;
+    }
+    const { data, error } = await db.rpc('cita_confirmacion_ver', { p_token: token });
+    if (error) {
+      mensaje('⚠️', 'No pudimos cargar tu cita', 'Revisa tu conexión a internet e inténtalo de nuevo.', false);
+      return;
+    }
+    if (!data) {
+      mensaje('⚠️', 'No encontramos tu cita', 'Es posible que la cita se haya eliminado. Escríbenos por WhatsApp para ayudarte.', false);
+      return;
+    }
+    cita = data;
+    if (cita.estado === 'cancelada' || cita.estado === 'completada' || cita.estado === 'en_sala' || cita.vencida) {
+      pantallaNoDisponible(cita.estado);
+    } else if (cita.respuesta_paciente === 'reagendar' && cita.estado === 'pendiente') {
+      pantallaReagendar();
+    } else if (cita.estado === 'confirmada') {
+      pantallaConfirmada();
+    } else {
+      pantallaPregunta();
+    }
+  }
+
+  iniciar();
+</script>
+</body>
+</html>
