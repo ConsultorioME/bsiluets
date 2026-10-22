@@ -14,6 +14,7 @@ if ('serviceWorker' in navigator) {
 // ─── INIT ADMIN ───
 function initAdmin() {
   if (typeof iniciarRealtime === 'function') iniciarRealtime();
+  vigilarLicencia();
 
   cargarConfigConsultorio();
   cargarHorarioAtencion();

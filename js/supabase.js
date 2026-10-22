@@ -110,27 +110,44 @@ function fechaHoyISO() {
 }
 
 // ─── VERIFICAR LICENCIA ───
+// Usa la misma función que las políticas RLS (sql/licencia.sql), así la
+// pantalla y la base de datos siempre coinciden. Si la consulta falla (sin
+// internet, o el SQL aún no se ha ejecutado) deja pasar: el bloqueo real
+// lo hace la base de datos, esto solo es para mostrar el aviso.
 async function verificarLicencia() {
-  const { data, error } = await db
-    .from('licencias')
-    .select('*')
-    .eq('sistema', 'bsiluets')
-    .single();
-
-  if (error || !data) return true;
-  return data.activo;
+  const { data, error } = await db.rpc('licencia_activa');
+  if (error) return true;
+  return data === true;
 }
 
-function mostrarSuspendido(mensaje) {
+function mostrarSuspendido() {
+  sessionStorage.removeItem('bsiluets_user');
   document.body.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0F0F0F;font-family:'Jost',sans-serif;text-align:center;padding:40px">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#FAFAF8;font-family:'Inter',sans-serif;text-align:center;padding:40px">
       <div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:32px;color:#C9A86C;margin-bottom:16px">B·Siluets</div>
-        <div style="font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#888;margin-bottom:32px">Sistema suspendido</div>
-        <div style="font-size:15px;color:#FAF7F2;opacity:.6;line-height:1.8;max-width:360px;margin:0 auto">${mensaje}</div>
-        <div style="margin-top:32px;font-size:12px;color:#C9A86C;opacity:.5">Software SIE · Tepic, Nayarit</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:600;color:#B8935A;margin-bottom:8px">B·Siluets</div>
+        <div style="font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#888;margin-bottom:40px">Sistema de Gestión</div>
+        <div style="width:40px;height:1px;background:#B8935A;margin:0 auto 40px"></div>
+        <div style="font-size:14px;color:#1A1A1A;opacity:.6;line-height:2;max-width:380px;margin:0 auto">
+          El acceso al sistema está temporalmente suspendido.<br>
+          Para restablecer el servicio, por favor contacte<br>a su proveedor de software.
+        </div>
+        <div style="margin-top:48px;font-size:13px;color:#B8935A;opacity:.8;letter-spacing:.1em">Software SIE &nbsp;·&nbsp; 311-267-2863</div>
       </div>
     </div>`;
+}
+
+// Revisa la licencia cada 5 min mientras el sistema está abierto, para
+// sacar también a quien ya tenía la sesión iniciada al momento de suspender.
+let _licenciaTimer = null;
+function vigilarLicencia() {
+  if (_licenciaTimer) return;
+  _licenciaTimer = setInterval(async () => {
+    if (!(await verificarLicencia())) {
+      clearInterval(_licenciaTimer);
+      mostrarSuspendido();
+    }
+  }, 5 * 60 * 1000);
 }
 
 // ─── LOGO B64 ───
