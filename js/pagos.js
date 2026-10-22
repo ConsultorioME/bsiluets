@@ -561,6 +561,8 @@ async function registrarCobro() {
     : `
       <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${formatearMetodoPagoNota(metodoPago)}</span></div>`;
 
+  filaPagoNota += filaCambioNota('cambio-pago');
+
   if (excedente > 0) {
     filaPagoNota += `
       <div class="nota-row" style="font-size:12px"><span>Recibido</span><span>${metodoDetalle.map(m => `${metodoLabel[m.metodo] || m.metodo} $${m.monto.toLocaleString()}`).join(' + ')}</span></div>
@@ -770,6 +772,7 @@ function limpiarFormPago() {
   const tpnEl = document.getElementById('tot-pendiente');
   if (tpEl) tpEl.textContent = '$0';
   if (tpnEl) tpnEl.textContent = '$0';
+  limpiarCambio('cambio-pago');
 
 
   // Resetear tipo de cobro
@@ -883,6 +886,13 @@ function recalcMetodos() {
   document.getElementById('tot-pagado').textContent    = '$' + totalPagado.toLocaleString();
   document.getElementById('tot-pendiente').textContent = '$' + pendiente.toLocaleString();
   document.getElementById('tot-pendiente').style.color = pendiente > 0 ? '#e74c3c' : '#27AE60';
+
+  // Calculadora de cambio sobre la parte que se paga en efectivo (js/cambio.js)
+  let efectivo = 0;
+  document.querySelectorAll('#metodos-pago-container .metodo-sel').forEach(sel => {
+    if (sel.value === 'efectivo') efectivo += parseFloat(sel.parentElement.querySelector('.metodo-monto')?.value || 0);
+  });
+  actualizarCambio('cambio-pago', efectivo);
 
   actualizarTipoCobroDisponible(totalCobro, totalPagado);
 }

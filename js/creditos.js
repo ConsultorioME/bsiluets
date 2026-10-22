@@ -288,6 +288,7 @@ function seleccionarConceptoAbono(tipo, id) {
   document.getElementById('abono-monto').value      = '';
   document.getElementById('abono-metodo').value     = '';
   document.getElementById('abono-referencia').value = '';
+  limpiarCambio('cambio-abono');
 
   const hoy = fechaHoyISO();
   document.getElementById('abono-fecha').value = hoy;
@@ -315,6 +316,10 @@ function calcNuevoSaldo() {
   const nuevo = Math.max(0, conceptoAbonoSeleccionado.saldo - abono);
   document.getElementById('abono-saldo-nuevo').textContent = '$' + nuevo.toLocaleString();
   document.getElementById('abono-saldo-nuevo').style.color = nuevo === 0 ? '#27AE60' : 'var(--gold)';
+
+  // Calculadora de cambio si el abono es en efectivo (js/cambio.js)
+  const esEfectivo = document.getElementById('abono-metodo').value.toLowerCase() === 'efectivo';
+  actualizarCambio('cambio-abono', esEfectivo ? abono : 0);
 }
 
 // ── GUARDAR ABONO (dirigido a un solo concepto: paquete o cobro) ──
@@ -376,6 +381,7 @@ async function guardarAbonoReal() {
           <span>Método de pago</span>
           <span>${metodoLabel[metodo] || metodo}</span>
         </div>
+        ${filaCambioNota('cambio-abono')}
         <div class="nota-row" style="font-size:12px;color:#27AE60">
           <span>Saldo restante (este cobro)</span>
           <span><strong>$${nuevoSaldoConcepto.toLocaleString()}</strong></span>

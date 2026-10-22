@@ -23,6 +23,8 @@ function abrirModalPaquete() {
       toggleEsquema();
     }
   }
+  limpiarCambio('cambio-npaq');
+  actualizarCambioPaq();
   openModal('nuevo-paquete');
 }
 
@@ -50,13 +52,14 @@ function limpiarFormVisita() {
   if (tipoPago) tipoPago.value = 'no';
   const bloquePago = document.getElementById('bloque-pago-vis');
   if (bloquePago) bloquePago.style.display = 'none';
+  limpiarCambio('cambio-vis');
 
   // Dejar un solo renglón de método de pago, en blanco
   const metodosCont = document.getElementById('vis-metodos-container');
   if (metodosCont) {
     metodosCont.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;align-items:center">
-        <select class="vis-metodo-sel" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
+        <select class="vis-metodo-sel" onchange="actualizarNotaVis()" style="background:var(--dark);border:1px solid rgba(201,168,108,.15);padding:8px 10px;font-family:'Jost',sans-serif;font-size:12px;color:var(--cream);outline:none">
           <option value="" selected disabled>Selecciona método...</option>
           <option value="efectivo">💵 Efectivo</option>
           <option value="tarjeta">💳 Tarjeta</option>
@@ -162,6 +165,7 @@ async function cargarPaquetes(busqueda = '') {
       <td>${est}</td>
       <td style="display:flex;gap:4px">
         <button class="tb-btn" style="padding:4px 8px;font-size:10px" onclick="verDetallePaq(\`${p.id}\`)">Ver</button>
+        ${saldo > 0.5 && p.esquema_pago !== 'cortesia' ? `<button class="tb-btn" style="padding:4px 8px;font-size:10px;color:var(--gold)" onclick="abrirAbonoPaquete(\`${p.id}\`)">$ Abonar</button>` : ''}
         <button class="tb-btn danger" style="padding:4px 8px;font-size:10px" onclick="eliminarPaquete(\`${p.id}\`)">✕</button>
       </td>
     </tr>`;
@@ -183,6 +187,15 @@ async function verDetallePaq(id) {
     .eq('paquete_id', id)
     .eq('eliminado', false)
     .order('numero_sesion', { ascending: true });
+
+  // Pagos al paquete fuera de una visita: enganche/pago total al crearlo y
+  // abonos posteriores (p. ej. liquidar un paquete que ya terminó sesiones).
+  const { data: abonosPaq } = await db
+    .from('abonos')
+    .select('*')
+    .eq('paquete_id', id)
+    .eq('eliminado', false)
+    .order('fecha', { ascending: true });
 
   const saldo = p.precio_total - p.pagado;
   const badgeCortesia = p.esquema_pago === 'cortesia'
@@ -215,6 +228,23 @@ async function verDetallePaq(id) {
       </tr>`).join('')
     : '<tr><td colspan="5" style="opacity:.3;text-align:center;padding:12px">Sin visitas registradas</td></tr>';
 
+  const abonosHTML = abonosPaq && abonosPaq.length > 0
+    ? `<div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);opacity:.55;margin:18px 0 10px">Abonos al paquete (sin sesión)</div>
+       <table><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Acción</th></tr>
+       ${abonosPaq.map(a => `<tr>
+         <td>${a.fecha || '—'}</td>
+         <td>${a.referencia || 'Abono'}</td>
+         <td>${formatearMetodoVis(a.metodo_pago)}</td>
+         <td style="color:var(--success)">$${parseFloat(a.monto).toLocaleString()}</td>
+         <td><button class="tb-btn" style="padding:4px 10px;font-size:10px;color:#e74c3c" onclick="eliminarAbonoPaquete('${a.id}','${p.id}')">🗑</button></td>
+       </tr>`).join('')}
+       </table>`
+    : '';
+
+  const btnAbonar = saldo > 0.5 && p.esquema_pago !== 'cortesia'
+    ? `<div style="text-align:right;margin-top:14px"><button class="btn-primary" onclick="abrirAbonoPaquete('${p.id}')">$ Registrar abono</button></div>`
+    : '';
+
   document.getElementById('det-content').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px">
       <div style="background:var(--dark);padding:14px;text-align:center">
@@ -239,7 +269,9 @@ async function verDetallePaq(id) {
         <span><div class="dot-s" style="border:1px solid var(--gold)"></div>Próxima</span>
       </div>
     </div>
-    <table><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Monto</th><th>Acción</th></tr>${histRows}</table>`;
+    <table><tr><th>Sesión</th><th>Fecha</th><th>Estado</th><th>Monto</th><th>Acción</th></tr>${histRows}</table>
+    ${abonosHTML}
+    ${btnAbonar}`;
 
   document.getElementById('detalle-paquete').style.display = 'block';
   document.getElementById('detalle-paquete').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -259,24 +291,24 @@ async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
     if (!autorizado) return;
   }
 
+  const { data: visitaElim } = await db.from('visitas').select('monto_cobrado').eq('id', visitaId).single();
+
   const { error: errDel } = await db.from('visitas').delete().eq('id', visitaId);
   if (errDel) { showToast('❌ Error al eliminar la sesión: ' + errDel.message); return; }
 
-  // Recalcular pagado y sesion_actual a partir de las visitas que quedan (fuente de verdad),
-  // en vez de solo restar a mano — así nunca queda descuadrado el saldo.
+  // sesion_actual se recalcula a partir de las visitas que quedan.
   const { data: restantes, error: errSel } = await db
     .from('visitas')
-    .select('numero_sesion, monto_cobrado')
+    .select('numero_sesion')
     .eq('paquete_id', paqueteId)
     .eq('eliminado', false);
 
   if (errSel) { showToast('❌ Sesión eliminada, pero no se pudo recalcular el saldo'); return; }
 
-  const nuevoPagado = (restantes || []).reduce((sum, v) => sum + (parseFloat(v.monto_cobrado) || 0), 0);
   const nuevaSesionActual = (restantes || []).reduce((max, v) => Math.max(max, v.numero_sesion), 0);
 
   const { error: errUpd } = await db.from('paquetes').update({
-    pagado: nuevoPagado,
+    pagado: await pagadoSinMonto(paqueteId, parseFloat(visitaElim?.monto_cobrado) || 0),
     sesion_actual: nuevaSesionActual,
   }).eq('id', paqueteId);
   if (errUpd) { showToast('❌ Error al actualizar el saldo del paquete'); return; }
@@ -284,6 +316,153 @@ async function eliminarVisita(visitaId, paqueteId, numeroSesion) {
   showToast('✓ Sesión eliminada — saldo recalculado');
   await verDetallePaq(paqueteId);
   await cargarPaquetes();
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
+}
+
+// ── PAGADO DEL PAQUETE MENOS UN MONTO (al eliminar una visita o abono) ──
+// Se resta solo lo eliminado en vez de recalcular sumando visitas: muchos
+// paquetes antiguos tienen el enganche/pago total en `pagado` sin un abono
+// que lo respalde, y recalcular desde cero se los borraría.
+async function pagadoSinMonto(paqueteId, monto) {
+  const { data: paq } = await db.from('paquetes').select('pagado').eq('id', paqueteId).single();
+  return Math.max(0, (parseFloat(paq?.pagado) || 0) - monto);
+}
+
+// ── ABONO A PAQUETE (sin registrar sesión) ──
+// Para cobrar saldo de un paquete fuera de una visita, p. ej. cuando la
+// paciente ya terminó todas sus sesiones y liquida después: el formulario
+// de visita ya no muestra paquetes terminados. Se guarda en `abonos` con
+// paquete_id (igual que el enganche) para que Caja lo cuente por su método.
+let abonoPaqData = null;
+
+async function abrirAbonoPaquete(id) {
+  const { data: p, error } = await db
+    .from('paquetes')
+    .select('*, pacientes(nombre, apellidos), tratamientos(nombre)')
+    .eq('id', id).single();
+  if (error || !p) { showToast('❌ Error al cargar el paquete'); return; }
+
+  abonoPaqData = p;
+  const saldo = p.precio_total - p.pagado;
+  document.getElementById('abpaq-paciente').textContent    = `${p.pacientes?.nombre} ${p.pacientes?.apellidos}`;
+  document.getElementById('abpaq-tratamiento').textContent = `${p.tratamientos?.nombre || '—'} · Sesiones ${p.sesion_actual}/${p.total_sesiones}`;
+  document.getElementById('abpaq-saldo').textContent       = '$' + saldo.toLocaleString();
+  document.getElementById('abpaq-monto').value      = '';
+  document.getElementById('abpaq-metodo').value     = '';
+  document.getElementById('abpaq-fecha').value      = fechaHoyISO();
+  document.getElementById('abpaq-referencia').value = '';
+  limpiarCambio('cambio-abpaq');
+  calcSaldoAbonoPaq();
+  openModal('abono-paquete');
+}
+
+function calcSaldoAbonoPaq() {
+  if (!abonoPaqData) return;
+  const monto = parseFloat(document.getElementById('abpaq-monto').value) || 0;
+  const nuevo = Math.max(0, abonoPaqData.precio_total - abonoPaqData.pagado - monto);
+  const el = document.getElementById('abpaq-saldo-nuevo');
+  el.textContent = '$' + nuevo.toLocaleString() + (nuevo === 0 ? ' — ✓ LIQUIDADO' : '');
+  el.style.color = nuevo === 0 ? '#27AE60' : 'var(--gold)';
+
+  const esEfectivo = document.getElementById('abpaq-metodo').value === 'efectivo';
+  actualizarCambio('cambio-abpaq', esEfectivo ? monto : 0);
+}
+
+async function guardarAbonoPaquete() {
+  if (!abonoPaqData) return;
+  const monto  = parseFloat(document.getElementById('abpaq-monto').value) || 0;
+  const metodo = document.getElementById('abpaq-metodo').value;
+  const fecha  = document.getElementById('abpaq-fecha').value;
+  const ref    = document.getElementById('abpaq-referencia').value.trim();
+  const saldo  = abonoPaqData.precio_total - abonoPaqData.pagado;
+
+  if (monto <= 0)          { showToast('⚠ Ingresa un monto válido'); return; }
+  if (!metodo)             { showToast('⚠ Selecciona el método de pago'); return; }
+  if (!fecha)              { showToast('⚠ Selecciona la fecha'); return; }
+  if (monto > saldo + 0.5) { showToast('⚠ El abono supera el saldo del paquete'); return; }
+
+  // Evita registrar el abono dos veces por un doble clic.
+  const btn = document.getElementById('abpaq-btn-guardar');
+  btn.disabled = true;
+
+  const p = abonoPaqData;
+  const nombrePac = `${p.pacientes?.nombre} ${p.pacientes?.apellidos}`;
+  const trat = p.tratamientos?.nombre || '—';
+
+  const { error: errAbono } = await db.from('abonos').insert([{
+    paciente_id: p.paciente_id,
+    paquete_id:  p.id,
+    monto:       monto,
+    metodo_pago: metodo,
+    fecha:       fecha,
+    referencia:  ref || `Abono a paquete: ${trat}`,
+  }]);
+  if (errAbono) { btn.disabled = false; showToast('❌ Error al registrar el abono: ' + errAbono.message); return; }
+
+  const nuevoPagado = p.pagado + monto;
+  const { error: errPaq } = await db.from('paquetes').update({ pagado: nuevoPagado }).eq('id', p.id);
+  btn.disabled = false;
+  if (errPaq) { showToast('⚠ Abono guardado, pero no se pudo actualizar el saldo del paquete: ' + errPaq.message); return; }
+
+  const saldoDespues = Math.max(0, p.precio_total - nuevoPagado);
+  const folio = 'AB-' + fecha.replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
+
+  document.getElementById('nota-imprimible').innerHTML = `
+    <div class="nota-preview">
+      <div class="nota-header"><div class="nota-logo"><img src="assets/img/logo-bsiluets.png" alt="B·Siluets" style="height:50px;width:auto;object-fit:contain"></div>${notaContactoHTML()}</div>
+      <div class="nota-folio">Folio: <strong>${folio}</strong> &nbsp;|&nbsp; ${fecha}</div>
+      <div class="nota-row"><span>Paciente</span><strong>${nombrePac}</strong></div>
+      <div class="nota-row"><span>Tratamiento</span><span>${trat}</span></div>
+      <div class="nota-row"><span>Sesiones</span><span>${p.sesion_actual} de ${p.total_sesiones}</span></div>
+      ${ref ? `<div class="nota-row"><span>Referencia</span><span>${ref}</span></div>` : ''}
+      <div class="nota-row total-row"><span>ABONO A PAQUETE</span><span><strong>$${monto.toLocaleString()}.00</strong></span></div>
+      <div class="nota-row" style="font-size:12px"><span>Método</span><span>${formatearMetodoVis(metodo)}</span></div>
+      ${filaCambioNota('cambio-abpaq')}
+      <div class="nota-saldo-box">Saldo pendiente: <strong>$${saldoDespues.toLocaleString()}</strong>${saldoDespues === 0 ? ' — ✓ LIQUIDADO' : ''}</div>
+      <div class="nota-firma"><div><div class="nota-linea">Recibió</div></div><div><div class="nota-linea">Paciente</div></div></div>
+      <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
+    </div>`;
+  document.getElementById('nota-impr-titulo').textContent = 'Nota de Abono';
+
+  closeModal('abono-paquete');
+  openModal('nota-impr');
+  showToast(`✓ Abono de $${monto.toLocaleString()} registrado`);
+  abonoPaqData = null;
+
+  await cargarPaquetes();
+  const detalle = document.getElementById('detalle-paquete');
+  if (detalle && detalle.style.display !== 'none') await verDetallePaq(p.id);
+  if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
+}
+
+// ── ELIMINAR ABONO DE PAQUETE (soft-delete, queda en Historial de Eliminaciones) ──
+async function eliminarAbonoPaquete(abonoId, paqueteId) {
+  if (typeof requiereAutorizacionAdmin === 'function' && requiereAutorizacionAdmin()) {
+    const autorizado = await pedirAutorizacionAdmin('Eliminar un abono requiere autorización de un Administrador.');
+    if (!autorizado) return;
+  }
+
+  if (!confirm('¿Eliminar este abono? Ya no contará en Caja y el saldo del paquete aumentará de nuevo. Quedará un registro en el Historial de Eliminaciones.')) return;
+
+  const { data: abono } = await db.from('abonos').select('monto').eq('id', abonoId).single();
+
+  const usuario = JSON.parse(sessionStorage.getItem('bsiluets_user') || '{}');
+  const { error } = await db.from('abonos').update({
+    eliminado:     true,
+    eliminado_por: usuario.usuario || 'admin',
+    eliminado_at:  new Date().toISOString(),
+  }).eq('id', abonoId);
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+
+  const { error: errPaq } = await db.from('paquetes')
+    .update({ pagado: await pagadoSinMonto(paqueteId, parseFloat(abono?.monto) || 0) })
+    .eq('id', paqueteId);
+  if (errPaq) { showToast('⚠ Abono eliminado, pero no se pudo actualizar el saldo del paquete'); return; }
+
+  showToast('✓ Abono eliminado — saldo recalculado');
+  await verDetallePaq(paqueteId);
+  await cargarPaquetes();
+  if (typeof cargarEliminados === 'function') await cargarEliminados();
   if (typeof sincronizarModulosFinancieros === 'function') sincronizarModulosFinancieros();
 }
 
@@ -417,6 +596,7 @@ function calcTotalPaq() {
   const precio   = parseFloat(document.getElementById('npaq-precio').value) || 0;
   const total    = sesiones * precio;
   document.getElementById('npaq-total').value = total;
+  actualizarCambioPaq();
 }
 
 function calcSaldoPaq() {
@@ -424,6 +604,19 @@ function calcSaldoPaq() {
   const eng    = parseFloat(document.getElementById('npaq-enganche')?.value) || 0;
   const s      = document.getElementById('npaq-saldo');
   if (s) s.value = Math.max(0, total - eng);
+  actualizarCambioPaq();
+}
+
+// Calculadora de cambio (js/cambio.js) para el pago total o el enganche en efectivo.
+function actualizarCambioPaq() {
+  const esquema = document.getElementById('npaq-esquema').value;
+  const metodo  = document.getElementById('npaq-metodo').value;
+  let efectivo = 0;
+  if (metodo === 'efectivo') {
+    if (esquema === 'total')    efectivo = parseFloat(document.getElementById('npaq-total').value) || 0;
+    if (esquema === 'enganche') efectivo = parseFloat(document.getElementById('npaq-enganche').value) || 0;
+  }
+  actualizarCambio('cambio-npaq', efectivo);
 }
 
 function toggleEsquema() {
@@ -442,6 +635,7 @@ function toggleEsquema() {
 
   const avisoCortesia = document.getElementById('bloque-cortesia-aviso');
   if (avisoCortesia) avisoCortesia.style.display = v === 'cortesia' ? 'block' : 'none';
+  actualizarCambioPaq();
 }
 
 // ── BÚSQUEDA ──
@@ -558,6 +752,17 @@ function actualizarNotaVis() {
   if (!paqSelData) return;
   const tipoPago = document.getElementById('vis-pago-tipo').value;
   const monto    = tipoPago === 'no' ? 0 : obtenerMontoTotalVis();
+
+  // Calculadora de cambio sobre la parte en efectivo (js/cambio.js); al
+  // teclear "Recibido" se vuelve a pintar esta vista previa.
+  let efectivo = 0;
+  if (tipoPago !== 'no') {
+    document.querySelectorAll('#vis-metodos-container .vis-metodo-sel').forEach(sel => {
+      if (sel.value === 'efectivo') efectivo += parseFloat(sel.parentElement.querySelector('.vis-metodo-monto')?.value || 0);
+    });
+  }
+  actualizarCambio('cambio-vis', efectivo, actualizarNotaVis);
+
   const saldoAntes   = paqSelData.precio_total - paqSelData.pagado;
   const saldoDespues = Math.max(0, saldoAntes - monto);
   const folio  = 'NV-' + fechaHoyISO().replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
@@ -580,7 +785,7 @@ function actualizarNotaVis() {
         <span>${esZero ? 'ASISTENCIA REGISTRADA' : 'TOTAL COBRADO'}</span>
         <span><strong>$${monto.toLocaleString()}.00</strong></span>
       </div>
-      ${!esZero ? `<div class="nota-row" style="font-size:12px"><span>Método</span><span>${formatearMetodoVis(obtenerMetodosVis())}</span></div>` : ''}
+      ${!esZero ? `<div class="nota-row" style="font-size:12px"><span>Método</span><span>${formatearMetodoVis(obtenerMetodosVis())}</span></div>${filaCambioNota('cambio-vis')}` : ''}
       <div class="nota-saldo-box">Saldo pendiente: <strong>$${saldoDespues.toLocaleString()}</strong>${saldoDespues === 0 ? ' — ✓ LIQUIDADO' : ''}</div>
       <div class="nota-firma"><div><div class="nota-linea">Recibió</div></div><div><div class="nota-linea">Paciente</div></div></div>
       <div class="nota-footer-txt">${notaNombreConsultorio()} — Consulta · Tratamiento · Bienestar</div>
@@ -858,20 +1063,19 @@ async function eliminarNotaDia(visitaId) {
 
   if (error) { showToast('❌ Error al eliminar la nota: ' + error.message); return; }
 
-  // Recalcular pagado y sesion_actual del paquete a partir de las visitas
-  // vigentes (no eliminadas) — misma lógica que eliminarVisita().
+  // Recalcular sesion_actual a partir de las visitas vigentes y restar el
+  // monto de esta nota al pagado — misma lógica que eliminarVisita().
   if (visita.paquete_id) {
     const { data: restantes } = await db
       .from('visitas')
-      .select('numero_sesion, monto_cobrado')
+      .select('numero_sesion')
       .eq('paquete_id', visita.paquete_id)
       .eq('eliminado', false);
 
-    const nuevoPagado       = (restantes || []).reduce((sum, v) => sum + (parseFloat(v.monto_cobrado) || 0), 0);
     const nuevaSesionActual = (restantes || []).reduce((max, v) => Math.max(max, v.numero_sesion), 0);
 
     await db.from('paquetes').update({
-      pagado: nuevoPagado,
+      pagado: await pagadoSinMonto(visita.paquete_id, monto),
       sesion_actual: nuevaSesionActual,
     }).eq('id', visita.paquete_id);
   }

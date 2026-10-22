@@ -126,6 +126,7 @@ async function abrirSaldoFavor(pacienteId) {
   document.getElementById('sf-metodo').value     = '';
   document.getElementById('sf-referencia').value = '';
   document.getElementById('sf-fecha').value      = fechaHoyISO();
+  limpiarCambio('cambio-sf');
 
   await cambiarPacienteSaldoFavor();
   openModal('saldo-favor');
@@ -181,6 +182,15 @@ async function cambiarPacienteSaldoFavor() {
     : '<div style="font-size:12px;color:var(--cream);opacity:.3">Sin movimientos</div>';
 }
 
+// Calculadora de cambio (js/cambio.js): solo en anticipos pagados en
+// efectivo; en una devolución el dinero sale de la clínica.
+function actualizarCambioSF() {
+  const tipo   = document.getElementById('sf-tipo').value;
+  const metodo = document.getElementById('sf-metodo').value;
+  const monto  = parseFloat(document.getElementById('sf-monto').value) || 0;
+  actualizarCambio('cambio-sf', tipo === 'deposito' && metodo === 'efectivo' ? monto : 0);
+}
+
 async function guardarMovimientoSaldoFavor() {
   const { pacienteId, nombre, saldo } = saldoFavorActual;
   const tipo   = document.getElementById('sf-tipo').value;
@@ -232,6 +242,7 @@ async function guardarMovimientoSaldoFavor() {
       <div style="border-top:1px solid rgba(184,147,90,.28);margin:10px 0"></div>
       <div class="nota-row total-row"><span>${tipo === 'deposito' ? 'MONTO RECIBIDO' : 'MONTO DEVUELTO'}</span><span><strong>$${monto.toLocaleString()}</strong></span></div>
       <div class="nota-row" style="font-size:12px"><span>Método de pago</span><span>${metodoLabel[metodo] || metodo}</span></div>
+      ${tipo === 'deposito' ? filaCambioNota('cambio-sf') : ''}
       <div class="nota-row" style="font-size:13px;color:#27AE60"><span><strong>Saldo a favor disponible</strong></span><span><strong>$${nuevoSaldo.toLocaleString()}</strong></span></div>
       <div class="nota-firma">
         <div><div class="nota-linea">${tipo === 'deposito' ? 'Recibió' : 'Entregó'}</div></div>
